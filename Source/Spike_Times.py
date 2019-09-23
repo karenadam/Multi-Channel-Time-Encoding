@@ -12,7 +12,11 @@ class spikeTimes(object):
         else:
             self.spikes[channel].append(item)
 
-    def get_spikes_of(self, channel):
+    def get_spikes_of(self, channel, asSpikeTimesObject = False):
+        if asSpikeTimesObject:
+            spikes_single = spikeTimes(n_channels = 1)
+            spikes_single.spikes = [self.spikes[channel]]
+            return spikes_single
         return np.array(self.spikes[channel])
 
     def get_total_num_spikes(self):
