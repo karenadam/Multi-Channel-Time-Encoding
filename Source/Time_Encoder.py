@@ -156,10 +156,10 @@ class timeEncoder(object):
             spikes.add(ch, spikes_of_n)
         return spikes
 
-    def decode(self, spikes, t, Omega, Delta_t):
+    def decode(self, spikes, t, Omega, Delta_t, cond_n = 1e-15):
         x = np.zeros_like(t)
         q, G = self.get_closed_form_matrices(spikes, Omega)
-        G_pl = np.linalg.pinv(G, rcond=1e-15)
+        G_pl = np.linalg.pinv(G, rcond=cond_n)
 
         start_index = 0
         for ch in range(self.n_channels):
