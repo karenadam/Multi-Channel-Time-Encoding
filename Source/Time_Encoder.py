@@ -28,6 +28,10 @@ class timeEncoder(object):
         self.b = self.check_dimensions(b)
         self.tol = tol
 
+    
+    def set_b(self, b):
+        self.b = self.check_dimensions(b)
+
     def check_dimensions(self, parameter):
         if not isinstance(parameter, (list)):
             parameter = [parameter] * self.n_channels
