@@ -30,3 +30,14 @@ class spikeTimes(object):
 
     def get_midpoints(self, channel):
         return (self.get_spikes_of(channel)[1:] + self.get_spikes_of(channel)[:-1]) / 2
+
+
+    def corrupt_with_gaussian(self, snr):
+        corrupted_spikeTimes = spikeTimes(self.n_channels)
+        for ch in range(self.n_channels):
+            spike_dif = self.get_spikes_of(ch)[1:]-self.get_spikes_of(ch)[:-1]
+            spike_dif_power = np.linalg.norm(spike_dif)/len(spike_dif)
+            noise_power =  snr*spike_dif_power
+            corrupted_spikeTimes.add(ch, self.spikes[ch] + np.random.normal(0,noise_power, size = self.get_spikes_of(ch).shape))
+        return corrupted_spikeTimes
+

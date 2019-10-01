@@ -95,7 +95,7 @@ class timeEncoder(object):
         ic_integrator=0,
     ):
         if ic_integrator_default:
-            integrator = -self.delta[channel]
+            integrator = -self.integrator_init[channel]
         else:
             integrator = ic_integrator
         z = [0]
@@ -150,8 +150,6 @@ class timeEncoder(object):
                 signal_end_time,
                 channel=ch,
                 tolerance=tol,
-                ic_integrator_default=False,
-                ic_integrator=self.integrator_init[ch],
             )
             spikes.add(ch, spikes_of_n)
         return spikes

@@ -84,3 +84,27 @@ class TestTimeEncoderSingleSignalMultiChannel:
             np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
             < 1e-3
         )
+
+    def test_TEM_can_reconstruct_precise_encoding_ex1(self):
+        kappa = [3, 3, 3, 3]
+        delta = [1, 1, 1, 1]
+        int_shift = [-1, -0.5, 0, 0.5]
+
+        omega = np.pi
+        delta_t = 1e-4
+        t = np.arange(0, 20, delta_t)
+        original = bandlimitedSignal(t, delta_t, omega, seed=10)
+        y = original.sample(t)
+        b = np.max(np.abs(y)) + 1
+
+        tem_mult = timeEncoder(kappa, delta, b, n_channels=4, integrator_init=int_shift)
+        spikes_mult = tem_mult.encode_precise(
+            original.sinc_locs, original.sinc_amps, omega, t[-1], delta_t
+        )
+        rec_mult = tem_mult.decode(spikes_mult, t, omega, delta_t)
+        start_index = int(len(y) / 10)
+        end_index = int(len(y) * 9 / 10)
+        assert (
+            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            < 1e-3
+        )
