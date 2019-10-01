@@ -38,6 +38,8 @@ class spikeTimes(object):
             spike_dif = self.get_spikes_of(ch)[1:]-self.get_spikes_of(ch)[:-1]
             spike_dif_power = np.linalg.norm(spike_dif)/len(spike_dif)
             noise_power =  snr*spike_dif_power
-            corrupted_spikeTimes.add(ch, self.spikes[ch] + np.random.normal(0,noise_power, size = self.get_spikes_of(ch).shape))
+            added_noise = np.random.normal(0,noise_power, size = self.get_spikes_of(ch).shape).tolist()
+            new_spikes_for_ch = [self.spikes[ch][l] + added_noise[l] for l in range(len(added_noise))]
+            corrupted_spikeTimes.add(ch, new_spikes_for_ch)
         return corrupted_spikeTimes
 
