@@ -201,7 +201,7 @@ class timeEncoder(object):
 
         spikes = spikeTimes(self.n_channels)
         for ch in range(self.n_channels):
-            spikes_of_ch = self.TEM_precise(
+            spikes_of_ch = self.encode_single_channel_precise(
                 x_sinc_locs,
                 y_sinc_amps[ch],
                 Omega,
