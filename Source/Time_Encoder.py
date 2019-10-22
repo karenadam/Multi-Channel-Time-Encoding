@@ -13,16 +13,18 @@ class timeEncoder(object):
         kappa,
         delta,
         b,
-        n_channels=1,
+        mixing_matrix,
         integrator_init=[0],
         tol=1e-12,
         precision=10,
     ):
+        self.mixing_matrix = np.atleast_2d(np.array(mixing_matrix))
+        self.n_signals = self.mixing_matrix.shape[1]
+        self.n_channels = self.mixing_matrix.shape[0]
         if isinstance(delta, (list)):
             self.precision = int(precision + 1 / max(delta))
         else:
             self.precision = int(precision + 1 / (delta))
-        self.n_channels = n_channels
         self.kappa = self.check_dimensions(kappa)
         self.delta = self.check_dimensions(delta)
         self.integrator_init = self.check_dimensions(integrator_init)
@@ -46,16 +48,16 @@ class timeEncoder(object):
 
     def encode(self, signal, delta_t, with_integral_probe=False):
         spikes = spikeTimes(self.n_channels)
+        input_signal = self.mix_signals(signal)
         if with_integral_probe:
             integrator_output = np.zeros((self.n_channels, max(signal.shape)))
         for ch in range(self.n_channels):
-            spike_locations = []
-            run_sum = np.cumsum(delta_t * (signal + self.b[ch])) / self.kappa[ch]
+            input_to_ch = input_signal[ch, :]
+            run_sum = np.cumsum(delta_t * (input_to_ch + self.b[ch])) / self.kappa[ch]
             integrator = self.integrator_init[ch]
             thresh = self.delta[ch] - integrator
             nextpos = bisect.bisect_left(run_sum, thresh)
-            while nextpos != len(signal):
-                spike_locations.append(nextpos)
+            while nextpos != len(input_to_ch):
                 spikes.add(ch, nextpos * delta_t)
                 thresh = thresh + 2 * self.delta[ch]
                 nextpos = bisect.bisect_left(run_sum, thresh)
@@ -70,34 +72,15 @@ class timeEncoder(object):
         else:
             return spikes
 
-    def encode_multi_signal(self, signal, mixing_matrix, delta_t):
-        spikes = spikeTimes(self.n_channels)
-        input_signal = self.mix_signals(signal, mixing_matrix)
-        for ch in range(self.n_channels):
-            input_to_ch = input_signal[ch, :]
-            run_sum = np.cumsum(delta_t * (input_to_ch + self.b[ch])) / self.kappa[ch]
-            integrator = self.integrator_init[ch]
-            thresh = self.delta[ch] - integrator
-            nextpos = bisect.bisect_left(run_sum, thresh)
-            while nextpos != len(input_to_ch):
-                spikes.add(ch, nextpos * delta_t)
-                thresh = thresh + 2 * self.delta[ch]
-                nextpos = bisect.bisect_left(run_sum, thresh)
-        return spikes
-
-    def mix_signals(self, signal, mixing_matrix):
-        mixing_matrix = np.array(mixing_matrix)
+    def mix_signals(self, signal):
         signal = np.atleast_2d(signal)
         if signal.shape[0] > signal.shape[1]:
             signal = signal.T
-        assert (
-            len(mixing_matrix.shape) == 2
-        ), "Your mixing matrix should have 2 dimensions"
         assert len(signal.shape) == 2, "Your signals should have 2 dimensions"
         assert (
-            mixing_matrix.shape[1] == signal.shape[0]
+            self.mixing_matrix.shape[1] == signal.shape[0]
         ), "Your signals and your mixing matrix have mismatching dimensions"
-        input_signal = mixing_matrix.dot(signal)
+        input_signal = self.mixing_matrix.dot(signal)
         return input_signal
 
     def compute_integral(self, sinc_loc, sinc_amp, Omega, start_time, end_time, b=0):
@@ -170,34 +153,30 @@ class timeEncoder(object):
             prvs_integral = si
         return z[1:]
 
-    def encode_precise(self, sinc_loc, sinc_amp, Omega, signal_end_time, tol=1e-8):
-        spikes = spikeTimes(self.n_channels)
-        for ch in range(self.n_channels):
-            spikes_of_n = self.encode_single_channel_precise(
-                sinc_loc, sinc_amp, Omega, signal_end_time, channel=ch, tolerance=tol
-            )
-            spikes.add(ch, spikes_of_n)
-        return spikes
-
-    def encode_mixed_precise(
+    def encode_precise(
         self,
         x_param,
-        mixing_matrix,
         Omega,
         signal_end_time,
         tol=1e-8,
         same_sinc_locs=True,
     ):
-        n_signals = len(x_param)
+        if isinstance(x_param, list):
+            n_signals = len(x_param)
+        else:
+            n_signals = 1
         if same_sinc_locs:
             x_sinc_locs = []
             x_sinc_amps = []
             for n in range(n_signals):
-                sinc_locs, sinc_amps = x_param[n].get_sincs()
+                if isinstance(x_param, list):
+                    sinc_locs, sinc_amps = x_param[n].get_sincs()
+                else:
+                    sinc_locs, sinc_amps = x_param.get_sincs()
                 x_sinc_amps.append(sinc_amps)
                 if n == 0:
                     x_sinc_locs = sinc_locs
-            y_sinc_amps = np.array(mixing_matrix).dot(np.array(x_sinc_amps))
+            y_sinc_amps = self.mixing_matrix.dot(np.array(x_sinc_amps))
 
         spikes = spikeTimes(self.n_channels)
         for ch in range(self.n_channels):
@@ -215,7 +194,8 @@ class timeEncoder(object):
         return spikes
 
     def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):
-        x = np.zeros_like(t)
+        x = np.zeros_like(t)       
+        y = np.zeros((self.n_signals, len(t)))   
         q, G = self.get_closed_form_matrices(spikes, Omega)
         G_pl = np.linalg.pinv(G, rcond=cond_n)
 
@@ -232,11 +212,13 @@ class timeEncoder(object):
                 )
             start_index += n_spikes_in_ch - 1
 
+
         return x
 
     def get_closed_form_matrices(self, spikes, Omega):
         n_spikes = spikes.get_total_num_spikes()
-        q = np.zeros((n_spikes - self.n_channels, 1))
+
+        q = np.zeros((n_spikes - self.n_channels, self.n_channels))
         G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
 
         start_index = 0
@@ -244,11 +226,9 @@ class timeEncoder(object):
             n_spikes_in_ch = spikes.get_n_spikes_of(ch)
             spikes_in_ch = spikes.get_spikes_of(ch)
             spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1] = np.transpose(
-                np.atleast_2d(
-                    (-self.b[ch] * (spike_diff) + 2 * self.kappa[ch] * (self.delta[ch]))
-                )
-            )
+            q[start_index : start_index + n_spikes_in_ch - 1, ch] = -self.b[ch] * (
+                    spike_diff
+                    ) + 2 * self.kappa[ch] * (self.delta[ch])
 
             start_index_j = 0
             for ch_j in range(self.n_channels):
@@ -269,63 +249,30 @@ class timeEncoder(object):
 
             start_index += n_spikes_in_ch - 1
 
+        if self.unweighted_multi_channel():
+            q = np.sum(q,1)
+
         return q, G
 
-    def get_closed_form_matrices_multi_signal_multi_channel(
-        self, spikes, mixing_matrix, Omega
+    def unweighted_multi_channel(self):
+        # Checks if one signal is fed with weight one to all channels
+        # If it is, the reconstruction can be done in closed form
+        if self.mixing_matrix.shape[1] == 1:
+            if (self.mixing_matrix == np.ones_like(self.mixing_matrix)).all():
+                return True
+        return False
+
+    def decode_recursive(
+        self, spikes, t, Omega, Delta_t, num_iterations=1
     ):
-        n_spikes = spikes.get_total_num_spikes()
-        q = np.zeros((n_spikes - self.n_channels, self.n_channels))
-        G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
-        A_tilde = mixing_matrix.dot(mixing_matrix.T)
 
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1, ch] = -self.b[ch] * (
-                spike_diff
-            ) + 2 * self.kappa[ch] * (self.delta[ch])
-
-            start_index_j = 0
-            for ch_j in range(self.n_channels):
-                n_spikes_in_ch_j = spikes.get_n_spikes_of(ch_j)
-
-                if ch_j == ch:
-                    # if True:
-                    spike_midpoints_j = spikes.get_midpoints(ch_j)
-                    up_bound = np.transpose(
-                        np.matlib.repmat(spikes_in_ch[1:], n_spikes_in_ch_j - 1, 1)
-                    ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
-                    low_bound = np.transpose(
-                        np.matlib.repmat(spikes_in_ch[:-1], n_spikes_in_ch_j - 1, 1)
-                    ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
-                    G[
-                        start_index : start_index + n_spikes_in_ch - 1,
-                        start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                    ] = (sici(Omega * up_bound)[0] - sici(Omega * low_bound)[0]) / np.pi
-
-                start_index_j += n_spikes_in_ch_j - 1
-
-            start_index += n_spikes_in_ch - 1
-
-        np.set_printoptions(threshold=np.inf)
-        return q, G
-
-    def decode_multi_signal_multi_channel_recursive(
-        self, spikes, mixing_matrix, t, Omega, Delta_t, num_iterations=1
-    ):
-        mixing_matrix = np.array(mixing_matrix)
-        n_signals = mixing_matrix.shape[1]
-
-        q, G = self.get_closed_form_matrices_multi_signal_multi_channel(
-            spikes, mixing_matrix, Omega
+        q, G = self.get_closed_form_matrices(
+            spikes,Omega
         )
         q = q.T
 
-        mixing_matrix_inv = np.linalg.inv(mixing_matrix.T.dot(mixing_matrix)).dot(
-            mixing_matrix.T
+        mixing_matrix_inv = np.linalg.inv(self.mixing_matrix.T.dot(self.mixing_matrix)).dot(
+            self.mixing_matrix.T
         )
 
         sinc_locs = spikes.get_all_midpoints()
@@ -336,7 +283,7 @@ class timeEncoder(object):
             t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=q_x
         )
 
-        q_y = mixing_matrix.dot(q_x)
+        q_y = self.mixing_matrix.dot(q_x)
         y_param = bandlimitedSignals(
             t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=q_y
         )
@@ -344,7 +291,7 @@ class timeEncoder(object):
         for n_iter in range(num_iterations):
             q_l = self.get_integrals_param(y_param.get_signals(), spikes)
             rec_matrix = np.atleast_2d(mixing_matrix_inv.dot(q_l))
-            for n in range(n_signals):
+            for n in range(self.n_signals):
                 sinc_amps_l = x_param.get_signals()[n].get_sinc_amps()
                 sinc_amps_0 = x_param_0.get_signals()[n].get_sinc_amps()
                 x_param.get_signals()[n].set_sinc_amps(
@@ -353,7 +300,7 @@ class timeEncoder(object):
                         for k in range(len(sinc_locs))
                     ]
                 )
-            y_sinc_amps = self.mix_sinc_amps(x_param.get_signals(), mixing_matrix)
+            y_sinc_amps = self.mix_sinc_amps(x_param.get_signals(), self.mixing_matrix)
             y_param = bandlimitedSignals(
                 t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=y_sinc_amps
             )
