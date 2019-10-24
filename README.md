@@ -5,14 +5,14 @@ This repository contains code to sample and reconstruct bandlimited signals usin
 # Publications
 
 ## Sampling and Reconstruction of Bandlimited Signals with Multi-Channel Time Encoding
-Paper: https://arxiv.org/abs/1907.05673
+Paper: https://arxiv.org/abs/1907.05673, Submitted to TSP.
 
 Code: https://github.com/karenadam/Sampling-and-Reconstruction-of-Bandlimited-Signals-with-Multi-Channel-Time-Encoding 
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/karenadam/Sampling-and-Reconstruction-of-Bandlimited-Signals-with-Multi-Channel-Time-Encoding/master?filepath=Code%2FGenerate%20Paper%20Figures.ipynb)
 
 ## Encoding and Decoding Mixed Bandlimited Signals using Spiking Integrate-and-Fire Neurons
-Paper: https://arxiv.org/abs/1910.09413
+Paper: https://arxiv.org/abs/1910.09413, Submitted to ICASSP 2020.
 
 Code: https://github.com/karenadam/Mixed-Bandlimited-Time-Encoding
 
