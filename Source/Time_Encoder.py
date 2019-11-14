@@ -193,27 +193,16 @@ class timeEncoder(object):
             spikes.add(ch, spikes_of_ch)
         return spikes
 
-    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):
-        x = np.zeros_like(t)       
+    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):     
         y = np.zeros((self.n_signals, len(t)))   
         q, G = self.get_closed_form_matrices(spikes, Omega)
         G_pl = np.linalg.pinv(G, rcond=cond_n)
 
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spike_midpoints = spikes.get_midpoints(ch)
-            for l in range(n_spikes_in_ch - 1):
-                x += (
-                    G_pl[start_index + l, :].dot(q)
-                    * np.sinc(Omega * (t - spike_midpoints[l]) / np.pi)
-                    * Omega
-                    / np.pi
-                )
-            start_index += n_spikes_in_ch - 1
+        x = self.apply_g(G_pl, q, spikes, t, Omega)
 
 
-        return x
+        return x  
+
 
     def get_closed_form_matrices(self, spikes, Omega):
         n_spikes = spikes.get_total_num_spikes()
@@ -349,20 +338,18 @@ class timeEncoder(object):
             start_index += len(spike_times) - 1
         return q
 
-    def apply_g(self, rec_matrix, spikes, t, Omega):
-        n_signals = rec_matrix.shape[0]
-        x = np.zeros((n_signals, len(t)))
+    def apply_g(self, G_pl, q, spikes, t, Omega):
+        x = np.zeros_like(t)   
         start_index = 0
         for ch in range(self.n_channels):
             n_spikes_in_ch = spikes.get_n_spikes_of(ch)
             spike_midpoints = spikes.get_midpoints(ch)
             for l in range(n_spikes_in_ch - 1):
-                x += np.atleast_2d(rec_matrix[:, start_index + l]).T.dot(
-                    np.atleast_2d(
-                        np.sinc(Omega * (t - spike_midpoints[l]) / np.pi)
-                        * Omega
-                        / np.pi
-                    )
+                x += (
+                    G_pl[start_index + l, :].dot(q)
+                    * np.sinc(Omega * (t - spike_midpoints[l]) / np.pi)
+                    * Omega
+                    / np.pi
                 )
             start_index += n_spikes_in_ch - 1
-        return x
+        return x  
