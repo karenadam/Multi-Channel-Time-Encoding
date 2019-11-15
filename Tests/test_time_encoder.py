@@ -1,6 +1,8 @@
 import sys
 import os
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../Source")
 from Time_Encoder import timeEncoder
@@ -34,6 +36,11 @@ class TestTimeEncoderSingleSignalSingleChannel:
         rec_single = tem_single.decode(spikes_single, t, omega, delta_t)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
+        plt.figure()
+        plt.plot(t,y)
+        plt.plot(t,rec_single)
+        plt.savefig('test2.png')
+
         assert (
             np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
             < 1e-3
