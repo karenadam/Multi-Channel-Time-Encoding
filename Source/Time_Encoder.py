@@ -193,9 +193,9 @@ class timeEncoder(object):
             spikes.add(ch, spikes_of_ch)
         return spikes
 
-    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):     
+    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):      
         y = np.zeros((self.n_signals, len(t)))   
-        q, G = self.get_closed_form_matrices(spikes, Omega)
+        q, G = self.get_closed_form_matrices2(spikes, Omega)
         G_pl = np.linalg.pinv(G, rcond=cond_n)
 
         x = self.apply_g(G_pl, q, spikes, t, Omega)
@@ -234,6 +234,63 @@ class timeEncoder(object):
                     start_index : start_index + n_spikes_in_ch - 1,
                     start_index_j : start_index_j + n_spikes_in_ch_j - 1,
                 ] = (sici(Omega * up_bound)[0] - sici(Omega * low_bound)[0]) / np.pi
+                start_index_j += n_spikes_in_ch_j - 1
+
+            start_index += n_spikes_in_ch - 1
+
+        if self.unweighted_multi_channel():
+            q = np.sum(q,1)
+
+        return q, G
+
+    def get_closed_form_matrices2(self, spikes, Omega):
+        n_spikes = spikes.get_total_num_spikes()
+
+        q = np.zeros((n_spikes - self.n_channels, self.n_channels))
+        G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
+
+        start_index = 0
+        for ch in range(self.n_channels):
+            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
+            spikes_in_ch = spikes.get_spikes_of(ch)
+            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
+            q[start_index : start_index + n_spikes_in_ch - 1, ch] = -self.b[ch] * (
+                    spike_diff
+                    ) + 2 * self.kappa[ch] * (self.delta[ch])
+
+            start_index_j = 0
+            for ch_j in range(self.n_channels):
+                n_spikes_in_ch_j = spikes.get_n_spikes_of(ch_j)
+                spikes_in_ch_j = spikes.get_spikes_of(ch_j)
+                spike_midpoints_j = spikes.get_midpoints(ch_j)
+
+                t_k_matrix = np.transpose(np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1))
+                t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
+
+                sum_k_l = t_k_matrix[:-1,:-1]-t_l_matrix[:-1,:-1]
+                sum_k1_l1 = t_k_matrix[1:,1:]-t_l_matrix[1:,1:]
+                sum_k1_l = t_k_matrix[1:,1:]-t_l_matrix[:-1,:-1]
+                sum_k_l1 = t_k_matrix[:-1,:-1]-t_l_matrix[1:,1:]
+
+                G[
+                    start_index : start_index + n_spikes_in_ch - 1,
+                    start_index_j : start_index_j + n_spikes_in_ch_j - 1,
+                ] = np.cos(sum_k1_l1)-np.cos(sum_k_l1)-np.cos(sum_k1_l)+np.cos(sum_k_l) +\
+                sum_k1_l1*sici(sum_k1_l1)[0] - sum_k_l1*sici(sum_k_l1)[0] - sum_k1_l*sici(sum_k1_l)[0]+\
+                sum_k_l*sici(sum_k_l)[0]
+
+
+                up_bound = np.transpose(
+                    np.matlib.repmat(spikes_in_ch[1:], n_spikes_in_ch_j - 1, 1)
+                ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
+                low_bound = np.transpose(
+                    np.matlib.repmat(spikes_in_ch[:-1], n_spikes_in_ch_j - 1, 1)
+                ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
+
+                # G[
+                #     start_index : start_index + n_spikes_in_ch - 1,
+                #     start_index_j : start_index_j + n_spikes_in_ch_j - 1,
+                # ] = (sici(Omega * up_bound)[0] - sici(Omega * low_bound)[0]) / np.pi
                 start_index_j += n_spikes_in_ch_j - 1
 
             start_index += n_spikes_in_ch - 1
@@ -343,13 +400,20 @@ class timeEncoder(object):
         start_index = 0
         for ch in range(self.n_channels):
             n_spikes_in_ch = spikes.get_n_spikes_of(ch)
+            spikes_in_ch = spikes.get_spikes_of(ch)
             spike_midpoints = spikes.get_midpoints(ch)
-            for l in range(n_spikes_in_ch - 1):
-                x += (
-                    G_pl[start_index + l, :].dot(q)
-                    * np.sinc(Omega * (t - spike_midpoints[l]) / np.pi)
-                    * Omega
-                    / np.pi
-                )
+
+            sici_upp_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T)/np.pi
+            sici_low_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T)/np.pi
+            kernel = Omega/np.pi* (sici(sici_upp_in)[0] - sici(sici_low_in)[0])/(spikes_in_ch[1:,None]- spikes_in_ch[:-1,None])
+
+            x += (G_pl[start_index:start_index+n_spikes_in_ch-1].dot(q).dot(kernel))
+            # for l in range(n_spikes_in_ch - 1):
+            #     x += (
+            #         G_pl[start_index + l, :].dot(q)
+            #         * np.sinc(Omega * (t - spike_midpoints[l]) / np.pi)
+            #         * Omega
+            #         / np.pi
+            #     )
             start_index += n_spikes_in_ch - 1
         return x  
