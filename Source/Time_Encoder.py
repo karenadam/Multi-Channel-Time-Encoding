@@ -281,19 +281,7 @@ class timeEncoder(object):
                 sum_k1_l1*sici(sum_k1_l1)[0] - sum_k_l1*sici(sum_k_l1)[0] - sum_k1_l*sici(sum_k1_l)[0]+\
                 sum_k_l*sici(sum_k_l)[0])/(diff_l1_l*Omega*np.pi)
 
-
-                up_bound = np.transpose(
-                    np.matlib.repmat(spikes_in_ch[1:], n_spikes_in_ch_j - 1, 1)
-                ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
-                low_bound = np.transpose(
-                    np.matlib.repmat(spikes_in_ch[:-1], n_spikes_in_ch_j - 1, 1)
-                ) - np.matlib.repmat(spike_midpoints_j, n_spikes_in_ch - 1, 1)
-
-                # G[
-                #     start_index : start_index + n_spikes_in_ch - 1,
-                #     start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                # ] = Si(up_bound, Omega) - Si(low_bound, Omega)
-                # start_index_j += n_spikes_in_ch_j - 1
+                start_index_j += n_spikes_in_ch_j - 1
 
             start_index += n_spikes_in_ch - 1
 
@@ -410,10 +398,5 @@ class timeEncoder(object):
             kernel = 1/np.pi*(Si(sici_upp_in, Omega)-Si(sici_low_in, Omega))/(spikes_in_ch[1:,None]- spikes_in_ch[:-1,None])
 
             x += (G_pl[start_index:start_index+n_spikes_in_ch-1].dot(q).dot(kernel))
-            # for l in range(n_spikes_in_ch - 1):
-            #     x += (
-            #         G_pl[start_index + l, :].dot(q)
-            #         * sinc(t - spike_midpoints[l], Omega)
-            #     )
             start_index += n_spikes_in_ch - 1
         return x  
