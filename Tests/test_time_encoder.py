@@ -94,11 +94,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
         )
 
     def test_TEM_can_reconstruct_standard_encoding_ex2(self):
-        kappa = [3, 3, 3, 3]
+        kappa = [1, 1, 1, 1]
         delta = [1, 1, 1, 1]
         int_shift = [-1, -0.5, 0, 0.5]
 
-        omega = np.pi
+        omega = 2*np.pi
         delta_t = 1e-4
         t = np.arange(0, 20, delta_t)
         np.random.seed(10)

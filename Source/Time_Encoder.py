@@ -233,7 +233,7 @@ class timeEncoder(object):
                 sum_k1_l1 = (t_k_matrix[1:,1:]  -t_l_matrix[1:,1:])*Omega
                 sum_k1_l =  (t_k_matrix[1:,1:]  -t_l_matrix[:-1,:-1])*Omega
                 sum_k_l1 =  (t_k_matrix[:-1,:-1]-t_l_matrix[1:,1:])*Omega
-                diff_l1_l = (t_l_matrix[1:,1:]  -t_l_matrix[:-1,:-1])*Omega
+                diff_l1_l = (t_l_matrix[1:,1:]  -t_l_matrix[:-1,:-1])
 
                 G[
                     start_index : start_index + n_spikes_in_ch - 1,
@@ -244,7 +244,7 @@ class timeEncoder(object):
 
                 start_index_j += n_spikes_in_ch_j - 1
 
-            start_index += n_spikes_in_ch - 1
+            start_index += n_spikes_in_ch - 1   
 
         if self.unweighted_multi_channel():
             q = np.sum(q,1)
@@ -356,7 +356,7 @@ class timeEncoder(object):
 
             sici_upp_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T)
             sici_low_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T)
-            kernel = 1/np.pi*(Si(sici_upp_in, Omega)-Si(sici_low_in, Omega))/(spikes_in_ch[1:,None]- spikes_in_ch[:-1,None])
+            kernel = (Si(sici_upp_in, Omega)-Si(sici_low_in, Omega))/(spikes_in_ch[1:,None]- spikes_in_ch[:-1,None])
 
             x += (G_pl[start_index:start_index+n_spikes_in_ch-1].dot(q).dot(kernel))
             start_index += n_spikes_in_ch - 1
