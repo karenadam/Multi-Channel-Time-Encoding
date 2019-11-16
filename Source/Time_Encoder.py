@@ -53,12 +53,14 @@ class timeEncoder(object):
         if with_integral_probe:
             integrator_output = np.zeros((self.n_channels, max(signal.shape)))
         for ch in range(self.n_channels):
+            spike_locations = []
             input_to_ch = input_signal[ch, :]
             run_sum = np.cumsum(delta_t * (input_to_ch + self.b[ch])) / self.kappa[ch]
             integrator = self.integrator_init[ch]
             thresh = self.delta[ch] - integrator
             nextpos = bisect.bisect_left(run_sum, thresh)
             while nextpos != len(input_to_ch):
+                spike_locations.append(nextpos)
                 spikes.add(ch, nextpos * delta_t)
                 thresh = thresh + 2 * self.delta[ch]
                 nextpos = bisect.bisect_left(run_sum, thresh)
