@@ -261,8 +261,9 @@ class timeEncoder(object):
                 return True
         return False
 
+
     def decode_recursive(
-        self, spikes, t, Omega, Delta_t, num_iterations=1
+        self, spikes, t, sinc_locs, Omega, Delta_t, num_iterations=1
     ):
 
         q, G = self.get_closed_form_matrices(
@@ -274,64 +275,54 @@ class timeEncoder(object):
             self.mixing_matrix.T
         )
 
-        sinc_locs = spikes.get_all_midpoints()
+        mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
 
-        q_x = mixing_matrix_inv.dot(q)
-        x_param_0 = []
-        x_param_0 = bandlimitedSignals(
-            t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=q_x
-        )
-
-        q_y = self.mixing_matrix.dot(q_x)
-        y_param = bandlimitedSignals(
-            t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=q_y
-        )
-        x_param = copy.deepcopy(x_param_0)
+        estimate_y_l = bandlimitedSignals(Omega, [], [])
         for n_iter in range(num_iterations):
-            q_l = self.get_integrals_param(y_param.get_signals(), spikes)
-            rec_matrix = np.atleast_2d(mixing_matrix_inv.dot(q_l))
-            for n in range(self.n_signals):
-                sinc_amps_l = x_param.get_signals()[n].get_sinc_amps()
-                sinc_amps_0 = x_param_0.get_signals()[n].get_sinc_amps()
-                x_param.get_signals()[n].set_sinc_amps(
-                    [
-                        sinc_amps_l[k] + sinc_amps_0[k] - rec_matrix[n, k]
-                        for k in range(len(sinc_locs))
-                    ]
-                )
-            y_sinc_amps = self.mix_sinc_amps(x_param.get_signals(), self.mixing_matrix)
-            y_param = bandlimitedSignals(
-                t, Delta_t, Omega, sinc_locs=sinc_locs, sinc_amps=y_sinc_amps
+            q_offset = 0
+            for ch in range(self.n_channels):
+                spikes_ch = spikes.get_spikes_of(ch)
+                if n_iter == 0:
+                    interspike_values = q[ch, q_offset:q_offset+len(spikes_ch)-1]/(spikes_ch[1:]-spikes_ch[:-1])
+                else:
+                    estimate_integrals = estimate_y_l.get_signal(ch).get_precise_integral(spikes_ch[:-1], spikes_ch[1:])
+                    desired_added_integrals = q[ch, q_offset:q_offset+len(spikes_ch)-1] - estimate_integrals
+                    interspike_values = desired_added_integrals/(spikes_ch[1:]-spikes_ch[:-1])
+                y_ch_spikes = piecewiseConstantSignal(spikes_ch, interspike_values)
+
+                y_ch_spikes_BL = y_ch_spikes.low_pass_filter(Omega)
+
+                y_ch_spikes_L_sincs = y_ch_spikes_BL.project_L_sincs(sinc_locs)
+
+                q_offset += len(spikes_ch) -1
+
+                if n_iter == 0:
+                    estimate_y_l.add(y_ch_spikes_L_sincs)
+                else:
+                    estimate_y_l.replace(y_ch_spikes_L_sincs, ch)
+
+            adjustment = self.mix_sinc_amps(estimate_y_l, mixing_projector)
+
+            if n_iter == 0:
+                y_sinc_amps = copy.deepcopy(adjustment)
+            else:
+                y_sinc_amps = y_sinc_amps + adjustment
+
+            estimate_y_l.set_sinc_amps(y_sinc_amps)
+
+        x_param = bandlimitedSignals(
+                Omega, sinc_locs=sinc_locs, sinc_amps=mixing_matrix_inv.dot(y_sinc_amps)
             )
+
         return x_param.sample(t)
 
-    def mix_sinc_amps(self, x_param, mixing_matrix):
-        num_x = len(x_param)
-        x_sinc_amps = np.zeros((num_x, len(x_param[0].get_sinc_amps())))
-        for n in range(num_x):
-            x_sinc_amps[n, :] = x_param[n].get_sinc_amps()
+    def mix_sinc_amps(self, x_param, mixing_matrix, return_as_BL_signals = False):
+        x_sinc_amps = x_param.get_sinc_amps()
         y_sinc_amps = mixing_matrix.dot(x_sinc_amps)
-        return y_sinc_amps
-
-    def get_integrals_param(self, sig_param, spikes):
-        q_shape = (len(sig_param), spikes.get_total_num_constraints())
-        q = np.zeros(q_shape)
-        start_index = 0
-        for ch in range(self.n_channels):
-            sig = sig_param[ch]
-            Omega = sig.Omega
-            sig_sinc_locs, sig_sinc_amps = sig.get_sincs()
-            spike_times = spikes.get_spikes_of(ch)
-            for i in range(len(spike_times) - 1):
-                q[ch, start_index + i] = self.compute_integral(
-                    sig_sinc_locs,
-                    sig_sinc_amps,
-                    Omega,
-                    spike_times[i],
-                    spike_times[i + 1],
-                )
-            start_index += len(spike_times) - 1
-        return q
+        if return_as_BL_signals:
+            return bandlimitedSignals([],[], x_param.get_omega(), x_param.get_sinc_locs(), y_sinc_amps)
+        else:
+            return y_sinc_amps
 
     def get_integrals(self, signal, spikes, Delta_t, q_shape):
         q = np.zeros(q_shape)
