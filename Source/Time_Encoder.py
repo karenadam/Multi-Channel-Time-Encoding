@@ -6,6 +6,7 @@ import copy
 from Helpers import Si, sinc
 from Signal import *
 from Spike_Times import spikeTimes
+import sys
 
 
 class timeEncoder(object):
@@ -132,7 +133,7 @@ class timeEncoder(object):
             if len(z) == 1:
                 si = si + (integrator + self.delta[channel])
                 # si += integrator
-            if np.abs(si - prvs_integral) < tolerance:
+            if np.abs(si - prvs_integral)/np.abs(si) < tolerance:
                 if len(z) > 1 and z[-1] - z[-2] < tolerance:
                     z = z[:-1]
                 z.append(current_int_end)
@@ -269,7 +270,7 @@ class timeEncoder(object):
         q, G = self.get_closed_form_matrices(
             spikes,Omega
         )
-        q = q.T
+        q = np.atleast_2d(q.T)
 
         mixing_matrix_inv = np.linalg.inv(self.mixing_matrix.T.dot(self.mixing_matrix)).dot(
             self.mixing_matrix.T
@@ -288,6 +289,7 @@ class timeEncoder(object):
                     estimate_integrals = estimate_y_l.get_signal(ch).get_precise_integral(spikes_ch[:-1], spikes_ch[1:])
                     desired_added_integrals = q[ch, q_offset:q_offset+len(spikes_ch)-1] - estimate_integrals
                     interspike_values = desired_added_integrals/(spikes_ch[1:]-spikes_ch[:-1])
+                
                 y_ch_spikes = piecewiseConstantSignal(spikes_ch, interspike_values)
 
                 y_ch_spikes_BL = y_ch_spikes.low_pass_filter(Omega)
@@ -302,6 +304,7 @@ class timeEncoder(object):
                     estimate_y_l.replace(y_ch_spikes_L_sincs, ch)
 
             adjustment = self.mix_sinc_amps(estimate_y_l, mixing_projector)
+            # adjustment = self.mix_sinc_amps(estimate_y_l, np.eye(3))
 
             if n_iter == 0:
                 y_sinc_amps = copy.deepcopy(adjustment)
@@ -315,6 +318,69 @@ class timeEncoder(object):
             )
 
         return x_param.sample(t)
+
+    def decode_mixed(
+            self, spikes, t, sinc_locs, Omega, Delta_t
+        ):
+
+            q, G = self.get_closed_form_matrices(
+                spikes,Omega
+            )
+            q = np.atleast_2d(q.T)
+            q = np.sum(q,0)
+
+            mixing_matrix_inv = np.linalg.inv(self.mixing_matrix.T.dot(self.mixing_matrix)).dot(
+                self.mixing_matrix.T
+            )
+
+            mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
+
+            discontinuities = [spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)]
+            values = [[0]*(len(discontinuities[ch])-1) for ch in range(self.n_channels)]
+
+            PCSSignal = piecewiseConstantSignals(discontinuities, values)
+            print(self.n_signals)
+            Ysincs = bandlimitedSignals(Omega, sinc_locs, sinc_amps = [[0]*len(sinc_locs)]*self.n_channels)
+            Xsincs = bandlimitedSignals(Omega, sinc_locs, sinc_amps = [[0]*len(sinc_locs)]*self.n_signals)
+
+
+            t_start = [spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)]
+            t_end = [spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)]
+            PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)
+
+            SumOfSincs_integ_computer = Ysincs.get_integral_matrix(t_start, t_end)
+            # SumOfSincs_mixer = Ysincs.get_flattened_mixing_matrix(mixing_projector)
+
+            Mback = Ysincs.get_flattened_mixing_matrix(mixing_matrix_inv)
+            Mfor= Xsincs.get_flattened_mixing_matrix(self.mixing_matrix)
+
+            t_start_flattened = np.array([item for sublist in t_start for item in sublist])
+            t_end_flattened = np.array([item for sublist in t_end for item in sublist])
+            PCS_sampler = self.adjust_weight(PCS_sampler, t_start_flattened, t_end_flattened)
+
+
+            # ps_inv = np.linalg.pinv(SumOfSincs_mixer.dot(PCS_sampler).dot(SumOfSincs_integ_computer))
+            ps_inv = np.linalg.pinv(Mback.dot(PCS_sampler).dot(SumOfSincs_integ_computer).dot(Mfor))
+
+            # y_sinc_amps = ps_inv.dot(SumOfSincs_mixer).dot(PCS_sampler).dot(q)
+            x_sinc_amps = ps_inv.dot(Mback).dot(PCS_sampler).dot(q)
+            # y_sinc_amps = SumOfSincs_mixer.dot(PCS_sampler).dot(ps_inv).dot(q)
+
+
+
+            x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
+            x_param = bandlimitedSignals(
+                    Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps
+                )
+
+            return x_param.sample(t)
+
+
+    def adjust_weight(self,PCS_sampler, t_start_flattened, t_end_flattened):
+        for n in range(PCS_sampler.shape[0]):
+            PCS_sampler[n,:] = PCS_sampler[n,:]/(t_end_flattened - t_start_flattened)
+        return PCS_sampler
+
 
     def mix_sinc_amps(self, x_param, mixing_matrix, return_as_BL_signals = False):
         x_sinc_amps = x_param.get_sinc_amps()
