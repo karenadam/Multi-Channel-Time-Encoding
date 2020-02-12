@@ -172,8 +172,6 @@ class bandlimitedSignals(object):
 
     def get_flattened_mixing_matrix(self, mixing_matrix):
         mixing_matrix = np.array(mixing_matrix)
-        print(mixing_matrix.shape[1])
-        print(self.n_signals)
         assert mixing_matrix.shape[1] == self.n_signals
         values = [item for sublist in self.sinc_amps for item in sublist]
         total_num_values = len(values)
@@ -185,7 +183,6 @@ class bandlimitedSignals(object):
         matrix_column_index = 0
         matrix_row_index = 0
         for signal_index in range(mixing_matrix.shape[0]):
-            print(signal_index)
             for sinc_index in range(num_sincs):
                 flattened_mixing_matrix[
                     matrix_row_index, sinc_index::num_sincs
