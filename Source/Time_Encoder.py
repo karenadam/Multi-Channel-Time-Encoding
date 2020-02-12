@@ -133,7 +133,7 @@ class timeEncoder(object):
             if len(z) == 1:
                 si = si + (integrator + self.delta[channel])
                 # si += integrator
-            if np.abs(si - prvs_integral)/np.abs(si) < tolerance:
+            if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
                 if len(z) > 1 and z[-1] - z[-2] < tolerance:
                     z = z[:-1]
                 z.append(current_int_end)
@@ -158,12 +158,7 @@ class timeEncoder(object):
         return z[1:]
 
     def encode_precise(
-        self,
-        x_param,
-        Omega,
-        signal_end_time,
-        tol=1e-8,
-        same_sinc_locs=True,
+        self, x_param, Omega, signal_end_time, tol=1e-8, same_sinc_locs=True
     ):
         if isinstance(x_param, list):
             n_signals = len(x_param)
@@ -197,16 +192,14 @@ class timeEncoder(object):
             spikes.add(ch, spikes_of_ch)
         return spikes
 
-    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):      
-        y = np.zeros((self.n_signals, len(t)))   
+    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):
+        y = np.zeros((self.n_signals, len(t)))
         q, G = self.get_closed_form_matrices(spikes, Omega)
         G_pl = np.linalg.pinv(G, rcond=cond_n)
 
         x = self.apply_g(G_pl, q, spikes, t, Omega)
 
-
-        return x  
-
+        return x
 
     def get_closed_form_matrices(self, spikes, Omega):
         n_spikes = spikes.get_total_num_spikes()
@@ -220,8 +213,8 @@ class timeEncoder(object):
             spikes_in_ch = spikes.get_spikes_of(ch)
             spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
             q[start_index : start_index + n_spikes_in_ch - 1, ch] = -self.b[ch] * (
-                    spike_diff
-                    ) + 2 * self.kappa[ch] * (self.delta[ch])
+                spike_diff
+            ) + 2 * self.kappa[ch] * (self.delta[ch])
 
             start_index_j = 0
             for ch_j in range(self.n_channels):
@@ -229,28 +222,39 @@ class timeEncoder(object):
                 spikes_in_ch_j = spikes.get_spikes_of(ch_j)
                 spike_midpoints_j = spikes.get_midpoints(ch_j)
 
-                t_k_matrix = np.transpose(np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1))
+                t_k_matrix = np.transpose(
+                    np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1)
+                )
                 t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
 
-                sum_k_l =   (t_k_matrix[:-1,:-1]-t_l_matrix[:-1,:-1])*Omega
-                sum_k1_l1 = (t_k_matrix[1:,1:]  -t_l_matrix[1:,1:])*Omega
-                sum_k1_l =  (t_k_matrix[1:,1:]  -t_l_matrix[:-1,:-1])*Omega
-                sum_k_l1 =  (t_k_matrix[:-1,:-1]-t_l_matrix[1:,1:])*Omega
-                diff_l1_l = (t_l_matrix[1:,1:]  -t_l_matrix[:-1,:-1])
+                sum_k_l = (t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]) * Omega
+                sum_k1_l1 = (t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]) * Omega
+                sum_k1_l = (t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]) * Omega
+                sum_k_l1 = (t_k_matrix[:-1, :-1] - t_l_matrix[1:, 1:]) * Omega
+                diff_l1_l = t_l_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
 
                 G[
                     start_index : start_index + n_spikes_in_ch - 1,
                     start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                ] = (np.cos(sum_k1_l1)-np.cos(sum_k_l1)-np.cos(sum_k1_l)+np.cos(sum_k_l) +\
-                sum_k1_l1*sici(sum_k1_l1)[0] - sum_k_l1*sici(sum_k_l1)[0] - sum_k1_l*sici(sum_k1_l)[0]+\
-                sum_k_l*sici(sum_k_l)[0])/(diff_l1_l*Omega*np.pi)
+                ] = (
+                    np.cos(sum_k1_l1)
+                    - np.cos(sum_k_l1)
+                    - np.cos(sum_k1_l)
+                    + np.cos(sum_k_l)
+                    + sum_k1_l1 * sici(sum_k1_l1)[0]
+                    - sum_k_l1 * sici(sum_k_l1)[0]
+                    - sum_k1_l * sici(sum_k1_l)[0]
+                    + sum_k_l * sici(sum_k_l)[0]
+                ) / (
+                    diff_l1_l * Omega * np.pi
+                )
 
                 start_index_j += n_spikes_in_ch_j - 1
 
-            start_index += n_spikes_in_ch - 1   
+            start_index += n_spikes_in_ch - 1
 
         if self.unweighted_multi_channel():
-            q = np.sum(q,1)
+            q = np.sum(q, 1)
 
         return q, G
 
@@ -262,19 +266,14 @@ class timeEncoder(object):
                 return True
         return False
 
+    def decode_recursive(self, spikes, t, sinc_locs, Omega, Delta_t, num_iterations=1):
 
-    def decode_recursive(
-        self, spikes, t, sinc_locs, Omega, Delta_t, num_iterations=1
-    ):
-
-        q, G = self.get_closed_form_matrices(
-            spikes,Omega
-        )
+        q, G = self.get_closed_form_matrices(spikes, Omega)
         q = np.atleast_2d(q.T)
 
-        mixing_matrix_inv = np.linalg.inv(self.mixing_matrix.T.dot(self.mixing_matrix)).dot(
-            self.mixing_matrix.T
-        )
+        mixing_matrix_inv = np.linalg.inv(
+            self.mixing_matrix.T.dot(self.mixing_matrix)
+        ).dot(self.mixing_matrix.T)
 
         mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
 
@@ -284,19 +283,28 @@ class timeEncoder(object):
             for ch in range(self.n_channels):
                 spikes_ch = spikes.get_spikes_of(ch)
                 if n_iter == 0:
-                    interspike_values = q[ch, q_offset:q_offset+len(spikes_ch)-1]/(spikes_ch[1:]-spikes_ch[:-1])
+                    interspike_values = q[
+                        ch, q_offset : q_offset + len(spikes_ch) - 1
+                    ] / (spikes_ch[1:] - spikes_ch[:-1])
                 else:
-                    estimate_integrals = estimate_y_l.get_signal(ch).get_precise_integral(spikes_ch[:-1], spikes_ch[1:])
-                    desired_added_integrals = q[ch, q_offset:q_offset+len(spikes_ch)-1] - estimate_integrals
-                    interspike_values = desired_added_integrals/(spikes_ch[1:]-spikes_ch[:-1])
-                
+                    estimate_integrals = estimate_y_l.get_signal(
+                        ch
+                    ).get_precise_integral(spikes_ch[:-1], spikes_ch[1:])
+                    desired_added_integrals = (
+                        q[ch, q_offset : q_offset + len(spikes_ch) - 1]
+                        - estimate_integrals
+                    )
+                    interspike_values = desired_added_integrals / (
+                        spikes_ch[1:] - spikes_ch[:-1]
+                    )
+
                 y_ch_spikes = piecewiseConstantSignal(spikes_ch, interspike_values)
 
                 y_ch_spikes_BL = y_ch_spikes.low_pass_filter(Omega)
 
                 y_ch_spikes_L_sincs = y_ch_spikes_BL.project_L_sincs(sinc_locs)
 
-                q_offset += len(spikes_ch) -1
+                q_offset += len(spikes_ch) - 1
 
                 if n_iter == 0:
                     estimate_y_l.add(y_ch_spikes_L_sincs)
@@ -314,79 +322,78 @@ class timeEncoder(object):
             estimate_y_l.set_sinc_amps(y_sinc_amps)
 
         x_param = bandlimitedSignals(
-                Omega, sinc_locs=sinc_locs, sinc_amps=mixing_matrix_inv.dot(y_sinc_amps)
-            )
+            Omega, sinc_locs=sinc_locs, sinc_amps=mixing_matrix_inv.dot(y_sinc_amps)
+        )
 
         return x_param.sample(t)
 
-    def decode_mixed(
-            self, spikes, t, sinc_locs, Omega, Delta_t
-        ):
+    def decode_mixed(self, spikes, t, sinc_locs, Omega, Delta_t):
 
-            q, G = self.get_closed_form_matrices(
-                spikes,Omega
-            )
-            q = np.atleast_2d(q.T)
-            q = np.sum(q,0)
+        q, G = self.get_closed_form_matrices(spikes, Omega)
+        q = np.atleast_2d(q.T)
+        q = np.sum(q, 0)
 
-            mixing_matrix_inv = np.linalg.inv(self.mixing_matrix.T.dot(self.mixing_matrix)).dot(
-                self.mixing_matrix.T
-            )
+        mixing_matrix_inv = np.linalg.inv(
+            self.mixing_matrix.T.dot(self.mixing_matrix)
+        ).dot(self.mixing_matrix.T)
 
-            mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
+        mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
 
-            discontinuities = [spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)]
-            values = [[0]*(len(discontinuities[ch])-1) for ch in range(self.n_channels)]
+        discontinuities = [
+            spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)
+        ]
+        values = [[0] * (len(discontinuities[ch]) - 1) for ch in range(self.n_channels)]
 
-            PCSSignal = piecewiseConstantSignals(discontinuities, values)
-            print(self.n_signals)
-            Ysincs = bandlimitedSignals(Omega, sinc_locs, sinc_amps = [[0]*len(sinc_locs)]*self.n_channels)
-            Xsincs = bandlimitedSignals(Omega, sinc_locs, sinc_amps = [[0]*len(sinc_locs)]*self.n_signals)
+        PCSSignal = piecewiseConstantSignals(discontinuities, values)
+        Ysincs = bandlimitedSignals(
+            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_channels
+        )
+        Xsincs = bandlimitedSignals(
+            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_signals
+        )
 
+        t_start = [
+            spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)
+        ]
+        t_end = [spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)]
+        PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)
 
-            t_start = [spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)]
-            t_end = [spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)]
-            PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)
+        SumOfSincs_integ_computer = Ysincs.get_integral_matrix(t_start, t_end)
 
-            SumOfSincs_integ_computer = Ysincs.get_integral_matrix(t_start, t_end)
-            # SumOfSincs_mixer = Ysincs.get_flattened_mixing_matrix(mixing_projector)
+        Mback = Ysincs.get_flattened_mixing_matrix(mixing_matrix_inv)
+        Mfor = Xsincs.get_flattened_mixing_matrix(self.mixing_matrix)
 
-            Mback = Ysincs.get_flattened_mixing_matrix(mixing_matrix_inv)
-            Mfor= Xsincs.get_flattened_mixing_matrix(self.mixing_matrix)
+        t_start_flattened = np.array([item for sublist in t_start for item in sublist])
+        t_end_flattened = np.array([item for sublist in t_end for item in sublist])
+        PCS_sampler = self.adjust_weight(
+            PCS_sampler, t_start_flattened, t_end_flattened
+        )
 
-            t_start_flattened = np.array([item for sublist in t_start for item in sublist])
-            t_end_flattened = np.array([item for sublist in t_end for item in sublist])
-            PCS_sampler = self.adjust_weight(PCS_sampler, t_start_flattened, t_end_flattened)
+        ps_inv = np.linalg.pinv(
+            Mback.dot(PCS_sampler).dot(SumOfSincs_integ_computer).dot(Mfor)
+        )
 
+        x_sinc_amps = ps_inv.dot(Mback).dot(PCS_sampler).dot(q)
 
-            # ps_inv = np.linalg.pinv(SumOfSincs_mixer.dot(PCS_sampler).dot(SumOfSincs_integ_computer))
-            ps_inv = np.linalg.pinv(Mback.dot(PCS_sampler).dot(SumOfSincs_integ_computer).dot(Mfor))
+        x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
+        x_param = bandlimitedSignals(Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps)
 
-            # y_sinc_amps = ps_inv.dot(SumOfSincs_mixer).dot(PCS_sampler).dot(q)
-            x_sinc_amps = ps_inv.dot(Mback).dot(PCS_sampler).dot(q)
-            # y_sinc_amps = SumOfSincs_mixer.dot(PCS_sampler).dot(ps_inv).dot(q)
+        return x_param.sample(t)
 
-
-
-            x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
-            x_param = bandlimitedSignals(
-                    Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps
-                )
-
-            return x_param.sample(t)
-
-
-    def adjust_weight(self,PCS_sampler, t_start_flattened, t_end_flattened):
+    def adjust_weight(self, PCS_sampler, t_start_flattened, t_end_flattened):
         for n in range(PCS_sampler.shape[0]):
-            PCS_sampler[n,:] = PCS_sampler[n,:]/(t_end_flattened - t_start_flattened)
+            PCS_sampler[n, :] = PCS_sampler[n, :] / (
+                t_end_flattened - t_start_flattened
+            )
         return PCS_sampler
 
-
-    def mix_sinc_amps(self, x_param, mixing_matrix, return_as_BL_signals = False):
+    def mix_sinc_amps(self, x_param, mixing_matrix, return_as_BL_signals=False):
         x_sinc_amps = x_param.get_sinc_amps()
         y_sinc_amps = mixing_matrix.dot(x_sinc_amps)
         if return_as_BL_signals:
-            return bandlimitedSignals([],[], x_param.get_omega(), x_param.get_sinc_locs(), y_sinc_amps)
+            return bandlimitedSignals(
+                [], [], x_param.get_omega(), x_param.get_sinc_locs(), y_sinc_amps
+            )
         else:
             return y_sinc_amps
 
@@ -406,17 +413,19 @@ class timeEncoder(object):
         return q
 
     def apply_g(self, G_pl, q, spikes, t, Omega):
-        x = np.zeros_like(t)   
+        x = np.zeros_like(t)
         start_index = 0
         for ch in range(self.n_channels):
             n_spikes_in_ch = spikes.get_n_spikes_of(ch)
             spikes_in_ch = spikes.get_spikes_of(ch)
             spike_midpoints = spikes.get_midpoints(ch)
 
-            sici_upp_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T)
-            sici_low_in = (np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T)
-            kernel = (Si(sici_upp_in, Omega)-Si(sici_low_in, Omega))/(spikes_in_ch[1:,None]- spikes_in_ch[:-1,None])
+            sici_upp_in = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T
+            sici_low_in = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T
+            kernel = (Si(sici_upp_in, Omega) - Si(sici_low_in, Omega)) / (
+                spikes_in_ch[1:, None] - spikes_in_ch[:-1, None]
+            )
 
-            x += (G_pl[start_index:start_index+n_spikes_in_ch-1].dot(q).dot(kernel))
+            x += G_pl[start_index : start_index + n_spikes_in_ch - 1].dot(q).dot(kernel)
             start_index += n_spikes_in_ch - 1
-        return x  
+        return x

@@ -11,12 +11,11 @@ class bandlimitedSignal(object):
         self.sinc_locs = sinc_locs
         self.sinc_amps = sinc_amps
 
-
-    def random(self, t, padding = 0):
-        delta_t = t[1]-t[0]
+    def random(self, t, padding=0):
+        delta_t = t[1] - t[0]
         T = np.pi / self.Omega
         samples_per_period = int(T / delta_t)
-        n_sincs = int(len(t) / samples_per_period)        
+        n_sincs = int(len(t) / samples_per_period)
         self.n_sincs = n_sincs
         self.sinc_locs = []
         self.sinc_amps = []
@@ -30,10 +29,7 @@ class bandlimitedSignal(object):
     def sample(self, t):
         signal = np.zeros_like(t)
         for i in range(len(self.sinc_locs)):
-            signal += (
-                self.sinc_amps[i]
-                * sinc(t - self.sinc_locs[i], self.Omega)
-            )
+            signal += self.sinc_amps[i] * sinc(t - self.sinc_locs[i], self.Omega)
         return signal
 
     def get_sincs(self):
@@ -48,7 +44,14 @@ class bandlimitedSignal(object):
         sinc_locs = np.atleast_2d(self.sinc_locs)
         sinc_amps = np.atleast_2d(self.sinc_amps)
         sinc_amps = np.matlib.repmat(sinc_amps, len(t_start), 1)
-        return np.sum(sinc_amps*(Si(t_end.T - sinc_locs, self.Omega) - Si(t_start.T-sinc_locs, self.Omega)),1)
+        return np.sum(
+            sinc_amps
+            * (
+                Si(t_end.T - sinc_locs, self.Omega)
+                - Si(t_start.T - sinc_locs, self.Omega)
+            ),
+            1,
+        )
 
     def set_sinc_amps(self, sinc_amps):
         self.sinc_amps = sinc_amps
@@ -68,13 +71,11 @@ class bandlimitedSignal(object):
 
 
 class bandlimitedSignals(object):
-    def __init__(self,Omega, sinc_locs=[], sinc_amps=[], padding=0):
+    def __init__(self, Omega, sinc_locs=[], sinc_amps=[], padding=0):
         self.n_signals = len(sinc_amps)
         self.signals = []
         for n in range(self.n_signals):
-            self.signals.append(
-                bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
-            )
+            self.signals.append(bandlimitedSignal(Omega, sinc_locs, sinc_amps[n]))
         self.sinc_locs = sinc_locs
         self.sinc_amps = sinc_amps
         self.Omega = Omega
@@ -89,7 +90,7 @@ class bandlimitedSignals(object):
             self.sinc_locs = signal.get_sinc_locs()
             self.sinc_amps.append(signal.get_sinc_amps().tolist())
         else:
-            assert (signal.get_sinc_locs() == self.sinc_locs)
+            assert signal.get_sinc_locs() == self.sinc_locs
             self.signals.append(signal)
             self.sinc_amps.append(signal.get_sinc_amps().tolist())
         self.n_signals += 1
@@ -98,12 +99,13 @@ class bandlimitedSignals(object):
         assert signal_index < len(self.signals)
         assert signal.get_omega() == self.Omega
 
-        assert (signal.get_sinc_locs() == self.sinc_locs)
+        assert signal.get_sinc_locs() == self.sinc_locs
         self.signals[signal_index] = copy.deepcopy(signal)
         self.sinc_amps[signal_index] = signal.get_sinc_amps().tolist()
 
     def get_signal(self, signal_index):
         return self.signals[signal_index]
+
     def get_signals(self):
         return self.signals
 
@@ -132,11 +134,10 @@ class bandlimitedSignals(object):
     def get_integrals(self, t_start, t_end):
         values = [item for sublist in self.sinc_amps for item in sublist]
         return self.get_integral_matrix(t_start, t_end).dot(values)
-  
 
     def get_integral_matrix(self, t_start, t_end):
         assert len(t_start) == self.n_signals
-        assert len(t_start)==len(t_end)
+        assert len(t_start) == len(t_end)
         t_start_flattened = [item for sublist in t_start for item in sublist]
         total_num_integrals = len(t_start_flattened)
         values = [item for sublist in self.sinc_amps for item in sublist]
@@ -152,14 +153,17 @@ class bandlimitedSignals(object):
             integ_low_limit = t_start[signal_index]
             num_values = len(self.sinc_amps[signal_index])
             for integral_index in range(num_integrals):
-                multiplier_vector = Si(integ_up_limit[integral_index] - sinc_locs, self.Omega) - Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
-                sinc_integral_matrix[matrix_row_index, matrix_column_index:matrix_column_index+num_values] = multiplier_vector
+                multiplier_vector = Si(
+                    integ_up_limit[integral_index] - sinc_locs, self.Omega
+                ) - Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
+                sinc_integral_matrix[
+                    matrix_row_index,
+                    matrix_column_index : matrix_column_index + num_values,
+                ] = multiplier_vector
                 matrix_row_index += 1
             matrix_column_index += num_values
 
         return sinc_integral_matrix
-
-    
 
     def mix_amplitudes(self, mixing_matrix):
         values = [item for sublist in self.sinc_amps for item in sublist]
@@ -175,30 +179,38 @@ class bandlimitedSignals(object):
         total_num_values = len(values)
         num_sincs = len(self.sinc_locs)
 
-        flattened_mixing_matrix = np.zeros((num_sincs*mixing_matrix.shape[0], num_sincs*mixing_matrix.shape[1]))
+        flattened_mixing_matrix = np.zeros(
+            (num_sincs * mixing_matrix.shape[0], num_sincs * mixing_matrix.shape[1])
+        )
         matrix_column_index = 0
         matrix_row_index = 0
         for signal_index in range(mixing_matrix.shape[0]):
             print(signal_index)
             for sinc_index in range(num_sincs):
-                flattened_mixing_matrix[matrix_row_index, sinc_index::num_sincs] = mixing_matrix[signal_index,:]
-                matrix_row_index +=1
+                flattened_mixing_matrix[
+                    matrix_row_index, sinc_index::num_sincs
+                ] = mixing_matrix[signal_index, :]
+                matrix_row_index += 1
         return flattened_mixing_matrix
+
 
 class piecewiseConstantSignal(object):
     def __init__(self, discontinuities, values):
-        assert (len(discontinuities) == len(values)+1)
+        assert len(discontinuities) == len(values) + 1
         self.discontinuities = discontinuities
         self.values = values
 
-    def sample(self,t):
+    def sample(self, t):
         value_index = 0
         samples = np.zeros_like(t)
         for n in range(len(t)):
-            if (t[n]<self.discontinuities[0] or t[n]>self.discontinuities[-1]):
+            if t[n] < self.discontinuities[0] or t[n] > self.discontinuities[-1]:
                 samples[n] = 0
             else:
-                while (value_index < len(self.values) and self.discontinuities[value_index+1]<t[n]):
+                while (
+                    value_index < len(self.values)
+                    and self.discontinuities[value_index + 1] < t[n]
+                ):
                     value_index += 1
                 samples[n] = self.values[value_index]
         return samples
@@ -212,17 +224,16 @@ class piecewiseConstantSignal(object):
     def get_values(self):
         return self.values
 
+
 class piecewiseConstantSignals(object):
-    def __init__(self, discontinuities = [[]], values = [[]]):
+    def __init__(self, discontinuities=[[]], values=[[]]):
         self.discontinuities = discontinuities
         self.values = values
         self.n_signals = len(discontinuities)
         self.signals = []
         for n in range(self.n_signals):
-            self.signals.append(
-                piecewiseConstantSignal(discontinuities[n], values[n])
-            )
-    
+            self.signals.append(piecewiseConstantSignal(discontinuities[n], values[n]))
+
     def add(self, signal):
         self.signals.append(signal)
         self.discontinuities.append(signal.get_discontinuities())
@@ -239,7 +250,6 @@ class piecewiseConstantSignals(object):
         samples = self.get_sampler_matrix(sample_locs, omega).dot(values)
         return samples
 
-
     def get_sampler_matrix(self, sample_locs, omega):
         num_samples = len(sample_locs)
         sample_locs = np.atleast_2d(sample_locs).T
@@ -247,7 +257,7 @@ class piecewiseConstantSignals(object):
         total_num_values = len(values)
         values = np.atleast_2d(values).T
 
-        PCS_sampler_matrix = np.zeros((self.n_signals*num_samples, total_num_values))
+        PCS_sampler_matrix = np.zeros((self.n_signals * num_samples, total_num_values))
 
         matrix_column_index = 0
         matrix_row_index = 0
@@ -257,8 +267,13 @@ class piecewiseConstantSignals(object):
             for sample_index in range(num_samples):
                 low_limit = self.discontinuities[signal_index][:-1]
                 up_limit = self.discontinuities[signal_index][1:]
-                multiplier_vector = Si(sample_locs[sample_index] - low_limit, omega) - Si(sample_locs[sample_index] - up_limit, omega)
-                PCS_sampler_matrix[matrix_row_index, matrix_column_index:matrix_column_index+num_values] =multiplier_vector
+                multiplier_vector = Si(
+                    sample_locs[sample_index] - low_limit, omega
+                ) - Si(sample_locs[sample_index] - up_limit, omega)
+                PCS_sampler_matrix[
+                    matrix_row_index,
+                    matrix_column_index : matrix_column_index + num_values,
+                ] = multiplier_vector
                 matrix_row_index += 1
 
             matrix_column_index += num_values
@@ -267,7 +282,6 @@ class piecewiseConstantSignals(object):
 
     def get_signal(self, signal_index):
         return self.signals[signal_index]
-
 
 
 class lPFedPCSSignal(object):
@@ -279,14 +293,15 @@ class lPFedPCSSignal(object):
     def sample(self, t):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
-            samples += self.values[value_index]*(Si(t - self.discontinuities[value_index], self.omega) - Si(t - self.discontinuities[value_index+1], self.omega))
+            samples += self.values[value_index] * (
+                Si(t - self.discontinuities[value_index], self.omega)
+                - Si(t - self.discontinuities[value_index + 1], self.omega)
+            )
         return samples
 
-    def project_L_sincs(self, sinc_locs, return_amplitudes = False):
+    def project_L_sincs(self, sinc_locs, return_amplitudes=False):
         sinc_amps = self.sample(sinc_locs)
         if return_amplitudes:
             return bandlimitedSignal(self.omega, sinc_locs, sinc_amps), sinc_amps
         else:
             return bandlimitedSignal(self.omega, sinc_locs, sinc_amps)
-
-

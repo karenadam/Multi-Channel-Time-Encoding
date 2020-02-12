@@ -7,7 +7,6 @@ from Time_Encoder import timeEncoder
 from Signal import bandlimitedSignal
 
 
-
 class TestTimeEncoderSingleSignalSingleChannel:
     def test_time_encoder_creator(self):
         TEM = timeEncoder(kappa=1, delta=1, b=1, mixing_matrix=[[1]])
@@ -15,7 +14,7 @@ class TestTimeEncoderSingleSignalSingleChannel:
         assert TEM.delta == [1], "delta was falsely assigned"
         assert TEM.b == [1], "b was falsely assigned"
 
-        TEM2 = timeEncoder(kappa=[1], delta=1, b=1, mixing_matrix=[[1],[1]])
+        TEM2 = timeEncoder(kappa=[1], delta=1, b=1, mixing_matrix=[[1], [1]])
         assert len(TEM2.kappa) == 2
 
     def test_can_reconstruct_standard_encoding(self):
@@ -57,10 +56,8 @@ class TestTimeEncoderSingleSignalSingleChannel:
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
-        tem_single = timeEncoder(kappa, delta, b, mixing_matrix = [[1]])
-        spikes_single = tem_single.encode_precise(
-            original, omega, t[-1]
-        )
+        tem_single = timeEncoder(kappa, delta, b, mixing_matrix=[[1]])
+        spikes_single = tem_single.encode_precise(original, omega, t[-1])
         rec_single = tem_single.decode(spikes_single, t, omega, delta_t)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
@@ -86,7 +83,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         b = np.max(np.abs(y)) + 1
 
         tem_mult = timeEncoder(
-            kappa, delta, b, mixing_matrix=[[1]]*4, integrator_init=[int_shift]
+            kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=[int_shift]
         )
         spikes_mult = tem_mult.encode(y, delta_t)
         rec_mult = tem_mult.decode(spikes_mult, t, omega, delta_t)
@@ -102,7 +99,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta = [1, 1, 1, 1]
         int_shift = [-1, -0.5, 0, 0.5]
 
-        omega = 2*np.pi
+        omega = 2 * np.pi
         delta_t = 1e-4
         t = np.arange(0, 20, delta_t)
         np.random.seed(10)
@@ -111,7 +108,9 @@ class TestTimeEncoderSingleSignalMultiChannel:
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
-        tem_mult = timeEncoder(kappa, delta, b, mixing_matrix=[[1]]*4, integrator_init=int_shift)
+        tem_mult = timeEncoder(
+            kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=int_shift
+        )
         spikes_mult = tem_mult.encode(y, delta_t)
         rec_mult = tem_mult.decode(spikes_mult, t, omega, delta_t)
         start_index = int(len(y) / 10)
@@ -131,7 +130,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
         original = bandlimitedSignal(omega)
-        original.random(t, padding = 2)
+        original.random(t, padding=2)
         y = original.sample(t)
         y = np.atleast_2d(y)
         A = [[1]]
@@ -142,10 +141,8 @@ class TestTimeEncoderSingleSignalMultiChannel:
             spikes_mult, t, original.get_sinc_locs(), omega, delta_t, num_iterations=100
         )
 
-
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
-
 
         assert (
             np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
@@ -164,7 +161,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
         original = bandlimitedSignal(omega)
-        original.random(t, padding = 2)
+        original.random(t, padding=2)
         y = original.sample(t)
         y = np.atleast_2d(y)
         A = [[1], [2]]
@@ -176,10 +173,8 @@ class TestTimeEncoderSingleSignalMultiChannel:
             spikes_mult, t, original.get_sinc_locs(), omega, delta_t, num_iterations=15
         )
 
-
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
-
 
         assert (
             np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
@@ -197,25 +192,22 @@ class TestTimeEncoderSingleSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
         original = bandlimitedSignal(omega)
-        original.random(t, padding = 2)
+        original.random(t, padding=2)
         y = original.sample(t)
         y = np.atleast_2d(y)
         A = [[1]]
 
         tem_mult = timeEncoder(kappa, delta, b, A)
-        spikes_mult = tem_mult.encode_precise(
-            original, omega, t[-1]
-        )
+        spikes_mult = tem_mult.encode_precise(original, omega, t[-1])
         rec_mult = tem_mult.decode_mixed(
             spikes_mult, t, original.get_sinc_locs(), omega, delta_t
         )
 
-
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
 
-        print(rec_mult[0,:])
-        print(y[0,:])
+        print(rec_mult[0, :])
+        print(y[0, :])
 
         assert (
             np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
@@ -234,7 +226,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
         original = bandlimitedSignal(omega)
-        original.random(t, padding = 2)
+        original.random(t, padding=2)
         y = original.sample(t)
         y = np.atleast_2d(y)
         A = [[1], [2]]
@@ -245,17 +237,14 @@ class TestTimeEncoderSingleSignalMultiChannel:
             spikes_mult, t, original.get_sinc_locs(), omega, delta_t
         )
 
-
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
-
 
         assert (
             np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
             / np.mean(y[0, :] ** 2)
             < 1e-3
         )
-
 
 
 class TestTimeEncoderMultiSignalMultiChannel:
@@ -278,9 +267,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         # Compute q matrix in 2 ways and make sure they match
         tem_mult = timeEncoder(kappa, delta, b, A, integrator_init=int_shift)
         spikes_mult = tem_mult.encode(y, delta_t)
-        q1, G = tem_mult.get_closed_form_matrices(
-            spikes_mult, omega
-        )
+        q1, G = tem_mult.get_closed_form_matrices(spikes_mult, omega)
         q2 = tem_mult.get_integrals(np.array(A).dot(y), spikes_mult, delta_t, q1.shape)
         assert np.mean((q1 - q2) ** 2) < (delta_t) ** 2
 
@@ -437,7 +424,12 @@ class TestTimeEncoderMultiSignalMultiChannel:
         spikes_mult = tem_mult.encode(y, delta_t)
 
         rec_mult = tem_mult.decode_recursive(
-            spikes_mult, t, original1.get_sinc_locs(), omega, delta_t, num_iterations=100
+            spikes_mult,
+            t,
+            original1.get_sinc_locs(),
+            omega,
+            delta_t,
+            num_iterations=100,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -453,7 +445,6 @@ class TestTimeEncoderMultiSignalMultiChannel:
             / np.mean(y[0, :] ** 2)
             < 1e-3
         )
-
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_recursive(self):
         kappa = [1, 1, 1]
@@ -480,16 +471,20 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y_param.append(original1)
         y_param.append(original2)
 
-
         # signal_set = bandlimitedSignals(omega)
         # signal_set.add(original1)
         # signal_set.add(original2)
 
         tem_mult = timeEncoder(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = tem_mult.encode_precise(y_param, omega, end_time,)
+        spikes_mult = tem_mult.encode_precise(y_param, omega, end_time)
 
         rec_mult = tem_mult.decode_recursive(
-            spikes_mult, t, original1.get_sinc_locs(), omega, delta_t, num_iterations=100
+            spikes_mult,
+            t,
+            original1.get_sinc_locs(),
+            omega,
+            delta_t,
+            num_iterations=100,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -505,8 +500,6 @@ class TestTimeEncoderMultiSignalMultiChannel:
             / np.mean(y[0, :] ** 2)
             < 1e-3
         )
-
-
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot(self):
         kappa = [1, 1, 1]
@@ -533,13 +526,12 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y_param.append(original1)
         y_param.append(original2)
 
-
         # signal_set = bandlimitedSignals(omega)
         # signal_set.add(original1)
         # signal_set.add(original2)
 
         tem_mult = timeEncoder(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = tem_mult.encode_precise(y_param, omega, end_time,)
+        spikes_mult = tem_mult.encode_precise(y_param, omega, end_time)
 
         rec_mult = tem_mult.decode_mixed(
             spikes_mult, t, original1.get_sinc_locs(), omega, delta_t
@@ -558,13 +550,13 @@ class TestTimeEncoderMultiSignalMultiChannel:
             / np.mean(y[0, :] ** 2)
             < 1e-3
         )
+
     def test_params_TEM_correct(self):
-        TEM = timeEncoder(kappa=1, delta=1, b=1, mixing_matrix=[[1]]*2)
+        TEM = timeEncoder(kappa=1, delta=1, b=1, mixing_matrix=[[1]] * 2)
         assert TEM.kappa == [1, 1], "kappa was falsely assigned"
         assert TEM.delta == [1, 1], "delta was falsely assigned"
         assert TEM.b == [1, 1], "b was falsely assigned"
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     test_can_reconstruct_standard_encoding_with_recursive_mixing_alg()
