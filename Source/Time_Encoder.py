@@ -16,7 +16,7 @@ class timeEncoder(object):
         delta,
         b,
         mixing_matrix,
-        integrator_init=[0],
+        integrator_init=[],
         tol=1e-12,
         precision=10,
     ):
@@ -29,7 +29,10 @@ class timeEncoder(object):
             self.precision = int(precision + 1 / (delta))
         self.kappa = self.check_dimensions(kappa)
         self.delta = self.check_dimensions(delta)
-        self.integrator_init = self.check_dimensions(integrator_init)
+        if len(integrator_init)>0:
+            self.integrator_init = self.check_dimensions(integrator_init)
+        else:
+            self.integrator_init = [- self.delta[l]*self.kappa[l] for l in range(self.n_channels)]
         self.b = self.check_dimensions(b)
         self.tol = tol
 
@@ -110,6 +113,7 @@ class timeEncoder(object):
         tolerance=1e-6,
         ic_integrator_default=True,
         ic_integrator=0,
+        with_start_time=False
     ):
         if ic_integrator_default:
             integrator = -self.integrator_init[channel]
@@ -155,10 +159,13 @@ class timeEncoder(object):
             ):
                 break
             prvs_integral = si
-        return z[1:]
+        if with_start_time:
+            return z
+        else:
+            return z[1:]
 
     def encode_precise(
-        self, x_param, Omega, signal_end_time, tol=1e-8, same_sinc_locs=True
+        self, x_param, Omega, signal_end_time, tol=1e-8, same_sinc_locs=True, with_start_time = False
     ):
         if isinstance(x_param, list):
             n_signals = len(x_param)
@@ -188,6 +195,7 @@ class timeEncoder(object):
                 tolerance=tol,
                 ic_integrator_default=False,
                 ic_integrator=self.integrator_init[ch],
+                with_start_time = with_start_time
             )
             spikes.add(ch, spikes_of_ch)
         return spikes
