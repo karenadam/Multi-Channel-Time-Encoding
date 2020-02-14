@@ -5,7 +5,7 @@ This repository contains code to sample and reconstruct bandlimited signals usin
 # Publications
 
 ## Sampling and Reconstruction of Bandlimited Signals with Multi-Channel Time Encoding
-Paper: https://ieeexplore.ieee.org/document/8682361
+Paper: https://ieeexplore.ieee.org/document/8962206
 
 Code: https://github.com/karenadam/Sampling-and-Reconstruction-of-Bandlimited-Signals-with-Multi-Channel-Time-Encoding 
 
