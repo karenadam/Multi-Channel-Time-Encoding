@@ -1,3 +1,6 @@
 *.pyc
 __pycache__
 *.pytest_cache
+Venv/
+Simulations/
+*.png

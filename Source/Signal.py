@@ -4,7 +4,134 @@ from Helpers import *
 import copy
 
 
-class bandlimitedSignal(object):
+class Signal(object):
+    def __init__(self):
+        return
+
+    def get_total_integral(self, t):
+        return np.sum(self.sample(t)) * (t[1] - t[0])
+
+
+class SignalCollection(object):
+    def __init__(self):
+        self._n_signals = 0
+        self._signals = []
+
+    def get_n_signals(self):
+        return self._n_signals
+
+    def set_n_signals(self):
+        assert False, "Number of signals cannot be set!"
+
+    def add(self, signal):
+        self._signals.append(signal)
+        self._n_signals += 1
+
+    n_signals = property(get_n_signals, set_n_signals)
+
+
+class periodicBandlimitedSignal(Signal):
+    def __init__(self, period, n_components, coefficient_values):
+        self.period = period
+        self._n_components = n_components
+        if len(coefficient_values) == n_components:
+            extended_coefficients = [x.conjugate() for x in coefficient_values[::-1]]
+            extended_coefficients[-1:] = coefficient_values
+        else:
+            assert (
+                len(coefficient_values) == 2 * n_components - 1
+            ), "You do not have as many coefficients as components"
+            extended_coefficients = coefficient_values
+        self.set_coefficients(extended_coefficients)
+
+    def set_coefficients(self, values):
+        assert (
+            len(values) == 2 * self._n_components - 1
+        ), "You do not have as many coefficients as components"
+        # self._coefficients = [x.conjugate() for x in values[::-1]]
+        self._coefficients = values
+        self._frequencies = (
+            np.arange(-self._n_components + 1, self._n_components, 1)
+            * 2
+            * np.pi
+            / self.period
+        )
+
+    def get_coefficients(self):
+        return self._coefficients
+
+    def sample(self, t):
+        reshaped_coefficients = np.atleast_2d(self._coefficients).T
+        reshaped_frequencies = np.atleast_2d(self._frequencies).T
+        reshaped_time = np.atleast_2d(t)
+        return np.sum(
+            reshaped_coefficients * np.exp(1j * reshaped_frequencies * reshaped_time), 0
+        )
+
+    def get_precise_integral(self, t_start, t_end):
+        reshaped_coefficients = np.atleast_2d(
+            np.delete(self._coefficients, self._n_components - 1)
+        ).T
+        reshaped_frequencies = np.atleast_2d(
+            np.delete(self._frequencies, self._n_components - 1)
+        ).T
+        integral = np.sum(
+            reshaped_coefficients
+            / (1j * reshaped_frequencies)
+            * np.exp(1j * reshaped_frequencies * t_end)
+            - reshaped_coefficients
+            / (1j * reshaped_frequencies)
+            * np.exp(1j * reshaped_frequencies * t_start),
+            0,
+        )
+        integral += self.coefficients[self._n_components - 1] * (t_end - t_start)
+        return integral
+
+    coefficients = property(get_coefficients, set_coefficients)
+
+
+class periodicBandlimitedSignals(SignalCollection):
+    def __init__(self, period, n_components=0, coefficient_values=[]):
+        self.period = period
+        self._n_components = n_components
+        self._n_signals = len(coefficient_values)
+        self._signals = []
+        for n in range(self._n_signals):
+            self._signals.append(
+                periodicBandlimitedSignal(period, n_components, coefficient_values[n])
+            )
+        self.coefficient_values = coefficient_values
+
+    def add(self, signal):
+        assert signal.period == self.period
+        if len(self._signals) == 0:
+            self._signals.append(signal)
+            self._n_components = signal._n_components
+            self.coefficient_values.append(signal.coefficients)
+        else:
+            assert self._n_components == signal._n_components
+            self._signals.append(signal)
+            self.coefficient_values.append(signal.coefficients)
+        self._n_signals += 1
+
+    def get_signal(self, signal_index):
+        return self._signals[signal_index]
+
+    def get_mixed_signals(self, mixing_matrix):
+        new_coefficients = mixing_matrix.dot(self.coefficient_values)
+        new_signals = periodicBandlimitedSignals(
+            self.period, self._n_components, new_coefficients
+        )
+        return new_signals
+
+    def sample(self, t):
+        samples = np.zeros((self._n_signals, len(t)))
+        for n in range(self._n_signals):
+            samples[n, :] = (self._signals[n]).sample(t)
+        return np.real(samples)
+
+
+class bandlimitedSignal(Signal):
     def __init__(self, Omega, sinc_locs=[], sinc_amps=[], padding=0):
         self.n_sincs = len(sinc_locs)
         self.Omega = Omega
@@ -34,9 +161,6 @@ class bandlimitedSignal(object):
 
     def get_sincs(self):
         return self.sinc_locs, self.sinc_amps
-
-    def get_total_integral(self, t):
-        return np.sum(self.sample(t)) * (t[1] - t[0])
 
     def get_precise_integral(self, t_start, t_end):
         t_start = np.atleast_2d(t_start)
@@ -169,6 +293,11 @@ class bandlimitedSignals(object):
         values = [item for sublist in self.sinc_amps for item in sublist]
 
         return self.get_flattened_mixing_matrix(mixing_matrix).dot(values)
+
+    def get_mixed_signals(self, mixing_matrix):
+        new_amps = mixing_matrix.dot(self.sinc_amps)
+        new_signals = bandlimitedSignals(self.Omega, self.sinc_locs, new_amps)
+        return new_signals
 
     def get_flattened_mixing_matrix(self, mixing_matrix):
         mixing_matrix = np.array(mixing_matrix)

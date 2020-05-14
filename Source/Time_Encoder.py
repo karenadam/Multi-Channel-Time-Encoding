@@ -3,7 +3,7 @@ from scipy.special import sici
 import numpy.matlib
 import bisect
 import copy
-from Helpers import Si, sinc
+from Helpers import Si, Sii, sinc, exp_int, Di, Dii
 from Signal import *
 from Spike_Times import spikeTimes
 import sys
@@ -29,10 +29,12 @@ class timeEncoder(object):
             self.precision = int(precision + 1 / (delta))
         self.kappa = self.check_dimensions(kappa)
         self.delta = self.check_dimensions(delta)
-        if len(integrator_init)>0:
+        if len(integrator_init) > 0:
             self.integrator_init = self.check_dimensions(integrator_init)
         else:
-            self.integrator_init = [- self.delta[l]*self.kappa[l] for l in range(self.n_channels)]
+            self.integrator_init = [
+                -self.delta[l] * self.kappa[l] for l in range(self.n_channels)
+            ]
         self.b = self.check_dimensions(b)
         self.tol = tol
 
@@ -90,30 +92,21 @@ class timeEncoder(object):
         input_signal = self.mixing_matrix.dot(signal)
         return input_signal
 
-    def compute_integral(self, sinc_loc, sinc_amp, Omega, start_time, end_time, b=0):
-        integral = b * (end_time - start_time)
-        for l in range(len(sinc_loc)):
-            integral += (
-                sinc_amp[l]
-                * (
-                    sici(Omega * (end_time - sinc_loc[l]))[0]
-                    - sici(Omega * (start_time - sinc_loc[l]))[0]
-                )
-                / np.pi
-            )
+    def compute_integral(self, signal, start_time, end_time, b=0):
+        integral = signal.get_precise_integral(start_time, end_time) + b * (
+            end_time - start_time
+        )
         return integral
 
     def encode_single_channel_precise(
         self,
-        sinc_loc,
-        sinc_amp,
-        Omega,
+        signal,
         signal_end_time,
         channel=0,
         tolerance=1e-6,
         ic_integrator_default=True,
         ic_integrator=0,
-        with_start_time=False
+        with_start_time=False,
     ):
         if ic_integrator_default:
             integrator = -self.integrator_init[channel]
@@ -129,14 +122,11 @@ class timeEncoder(object):
         counter = 0
         while z[-1] < signal_end_time:
             si = (
-                self.compute_integral(
-                    sinc_loc, sinc_amp, Omega, z[-1], current_int_end, self.b[channel]
-                )
+                self.compute_integral(signal, z[-1], current_int_end, self.b[channel])
                 / self.kappa[channel]
             )
             if len(z) == 1:
                 si = si + (integrator + self.delta[channel])
-                # si += integrator
             if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
                 if len(z) > 1 and z[-1] - z[-2] < tolerance:
                     z = z[:-1]
@@ -151,9 +141,7 @@ class timeEncoder(object):
                 low_int_bound = current_int_end
                 current_int_end = (current_int_end + upp_int_bound) / 2
             if (
-                self.compute_integral(
-                    sinc_loc, sinc_amp, Omega, z[-1], signal_end_time, self.b[channel]
-                )
+                self.compute_integral(signal, z[-1], signal_end_time, self.b[channel])
                 / self.kappa[channel]
                 < 2 * self.delta[channel]
             ):
@@ -165,52 +153,87 @@ class timeEncoder(object):
             return z[1:]
 
     def encode_precise(
-        self, x_param, Omega, signal_end_time, tol=1e-8, same_sinc_locs=True, with_start_time = False
+        self,
+        x_param,
+        signal_end_time,
+        tol=1e-8,
+        same_sinc_locs=True,
+        with_start_time=False,
     ):
-        if isinstance(x_param, list):
-            n_signals = len(x_param)
-        else:
-            n_signals = 1
-        if same_sinc_locs:
-            x_sinc_locs = []
-            x_sinc_amps = []
-            for n in range(n_signals):
-                if isinstance(x_param, list):
-                    sinc_locs, sinc_amps = x_param[n].get_sincs()
-                else:
-                    sinc_locs, sinc_amps = x_param.get_sincs()
-                x_sinc_amps.append(sinc_amps)
-                if n == 0:
-                    x_sinc_locs = sinc_locs
-            y_sinc_amps = self.mixing_matrix.dot(np.array(x_sinc_amps))
+        assert isinstance(x_param, bandlimitedSignals) or isinstance(
+            x_param, periodicBandlimitedSignals
+        )
+        n_signals = x_param.n_signals
+
+        y_param = x_param.get_mixed_signals(self.mixing_matrix)
 
         spikes = spikeTimes(self.n_channels)
         for ch in range(self.n_channels):
+            # signal = bandlimitedSignal(Omega, x_sinc_locs, y_sinc_amps[ch])
+            signal = y_param.get_signal(ch)
+
             spikes_of_ch = self.encode_single_channel_precise(
-                x_sinc_locs,
-                y_sinc_amps[ch],
-                Omega,
+                signal,
                 signal_end_time,
                 channel=ch,
                 tolerance=tol,
                 ic_integrator_default=False,
                 ic_integrator=self.integrator_init[ch],
-                with_start_time = with_start_time
+                with_start_time=with_start_time,
             )
             spikes.add(ch, spikes_of_ch)
         return spikes
 
-    def decode(self, spikes, t, Omega, Delta_t, cond_n=1e-15):
+    def decode(
+        self,
+        spikes,
+        t,
+        periodic=False,
+        Omega=None,
+        period=None,
+        n_components=None,
+        cond_n=1e-15,
+    ):
+        assert (not periodic and Omega is not None) or (
+            periodic and (period is not None) and (n_components is not None)
+        ), "the type of signal is not consistent with the parameters given"
+
         y = np.zeros((self.n_signals, len(t)))
-        q, G = self.get_closed_form_matrices(spikes, Omega)
+        q, G = self.get_closed_form_matrices(
+            spikes,
+            periodic=periodic,
+            Omega=Omega,
+            period=period,
+            n_components=n_components,
+        )
         G_pl = np.linalg.pinv(G, rcond=cond_n)
 
-        x = self.apply_g(G_pl, q, spikes, t, Omega)
+        x = self.apply_g(
+            G_pl,
+            q,
+            spikes,
+            t,
+            periodic=periodic,
+            Omega=Omega,
+            period=period,
+            n_components=n_components,
+        )
 
         return x
 
-    def get_closed_form_matrices(self, spikes, Omega):
+    def get_closed_form_matrices(
+        self, spikes, periodic=False, Omega=None, period=None, n_components=None
+    ):
+        assert (not periodic and Omega is not None) or (
+            periodic and (period is not None) and (n_components is not None)
+        ), "the type of signal is not consistent with the parameters given"
         n_spikes = spikes.get_total_num_spikes()
+
+        def Kii(t):
+            if periodic:
+                return Dii(t, period, n_components)
+            else:
+                return Sii(t, Omega)
 
         q = np.zeros((n_spikes - self.n_channels, self.n_channels))
         G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
@@ -235,26 +258,17 @@ class timeEncoder(object):
                 )
                 t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
 
-                sum_k_l = (t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]) * Omega
-                sum_k1_l1 = (t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]) * Omega
-                sum_k1_l = (t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]) * Omega
-                sum_k_l1 = (t_k_matrix[:-1, :-1] - t_l_matrix[1:, 1:]) * Omega
+                sum_k_l = t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]
+                sum_k1_l1 = t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]
+                sum_k1_l = t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
+                sum_k_l1 = t_k_matrix[:-1, :-1] - t_l_matrix[1:, 1:]
                 diff_l1_l = t_l_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
 
                 G[
                     start_index : start_index + n_spikes_in_ch - 1,
                     start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                ] = (
-                    np.cos(sum_k1_l1)
-                    - np.cos(sum_k_l1)
-                    - np.cos(sum_k1_l)
-                    + np.cos(sum_k_l)
-                    + sum_k1_l1 * sici(sum_k1_l1)[0]
-                    - sum_k_l1 * sici(sum_k_l1)[0]
-                    - sum_k1_l * sici(sum_k1_l)[0]
-                    + sum_k_l * sici(sum_k_l)[0]
-                ) / (
-                    diff_l1_l * Omega * np.pi
+                ] = (Kii(sum_k1_l1) - Kii(sum_k_l1) - Kii(sum_k1_l) + Kii(sum_k_l)) / (
+                    diff_l1_l
                 )
 
                 start_index_j += n_spikes_in_ch_j - 1
@@ -276,7 +290,7 @@ class timeEncoder(object):
 
     def decode_recursive(self, spikes, t, sinc_locs, Omega, Delta_t, num_iterations=1):
 
-        q, G = self.get_closed_form_matrices(spikes, Omega)
+        q, G = self.get_closed_form_matrices(spikes, periodic=False, Omega=Omega)
         q = np.atleast_2d(q.T)
 
         mixing_matrix_inv = np.linalg.inv(
@@ -335,11 +349,12 @@ class timeEncoder(object):
 
         return x_param.sample(t)
 
-    def decode_mixed(self, spikes, t, sinc_locs, Omega, Delta_t):
+    def decode_mixed(self, spikes, t, sinc_locs, Omega, Delta_t, return_as_param=False):
 
-        q, G = self.get_closed_form_matrices(spikes, Omega)
+        q, G = self.get_closed_form_matrices(spikes, periodic=False, Omega=Omega)
         q = np.atleast_2d(q.T)
         q = np.sum(q, 0)
+        print(q)
 
         mixing_matrix_inv = np.linalg.inv(
             self.mixing_matrix.T.dot(self.mixing_matrix)
@@ -386,7 +401,99 @@ class timeEncoder(object):
         x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
         x_param = bandlimitedSignals(Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps)
 
-        return x_param.sample(t)
+        if return_as_param:
+            return x_param
+        else:
+            return x_param.sample(t)
+
+    def decode_bilinear_measurements(
+        self,
+        spikes,
+        t,
+        periodic=False,
+        Omega=None,
+        period=None,
+        n_components=None,
+        return_as_param=False,
+    ):
+
+        assert (not periodic and Omega is not None) or (
+            periodic and (period is not None) and (n_components is not None)
+        ), "the type of signal is not consistent with the parameters given"
+        n_spikes = spikes.get_total_num_spikes()
+
+        q = np.zeros((n_spikes - self.n_channels, 1))
+        measurement_vectors = np.zeros(
+            (n_spikes - self.n_channels, self.n_signals * (2 * n_components - 1))
+        )
+        # G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
+
+        start_index = 0
+        for ch in range(self.n_channels):
+            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
+            spikes_in_ch = spikes.get_spikes_of(ch)
+            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
+            q[start_index : start_index + n_spikes_in_ch - 1, 0] = -self.b[ch] * (
+                spike_diff
+            ) + 2 * self.kappa[ch] * (self.delta[ch])
+
+            a_ch = np.atleast_2d(self.mixing_matrix[ch, :])
+            components = (
+                1j * 2 * np.pi / period * np.arange(-n_components + 1, n_components, 1)
+            )
+            for n in range(n_spikes_in_ch - 1):
+                integrals = exp_int(
+                    components, [spikes_in_ch[n]], [spikes_in_ch[n + 1]]
+                )
+                integrals[n_components - 1] = spikes_in_ch[n + 1] - spikes_in_ch[n]
+                measurement_vectors[start_index + n, :] = (
+                    a_ch.T.dot(integrals.T)
+                ).flatten()
+
+            start_index += n_spikes_in_ch - 1
+
+        recovered_coefficients_flattened = np.linalg.pinv(measurement_vectors).dot(q)
+        recovered_coefficients = np.reshape(
+            recovered_coefficients_flattened, (self.n_signals, 2 * n_components - 1)
+        )
+
+        x_param = periodicBandlimitedSignals(
+            period, n_components, recovered_coefficients
+        )
+        if return_as_param:
+            return x_param
+        else:
+            return x_param.sample(t)
+
+    def get_integral_matrix(self, t_start, t_end):
+        assert len(t_start) == self.n_signals
+        assert len(t_start) == len(t_end)
+        t_start_flattened = [item for sublist in t_start for item in sublist]
+        total_num_integrals = len(t_start_flattened)
+        values = [item for sublist in self.sinc_amps for item in sublist]
+        total_num_values = len(values)
+        sinc_locs = np.array(self.sinc_locs)
+
+        sinc_integral_matrix = np.zeros((total_num_integrals, total_num_values))
+        matrix_column_index = 0
+        matrix_row_index = 0
+        for signal_index in range(self.n_signals):
+            num_integrals = len(t_start[signal_index])
+            integ_up_limit = t_end[signal_index]
+            integ_low_limit = t_start[signal_index]
+            num_values = len(self.sinc_amps[signal_index])
+            for integral_index in range(num_integrals):
+                multiplier_vector = Si(
+                    integ_up_limit[integral_index] - sinc_locs, self.Omega
+                ) - Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
+                sinc_integral_matrix[
+                    matrix_row_index,
+                    matrix_column_index : matrix_column_index + num_values,
+                ] = multiplier_vector
+                matrix_row_index += 1
+            matrix_column_index += num_values
+
+        return sinc_integral_matrix
 
     def adjust_weight(self, PCS_sampler, t_start_flattened, t_end_flattened):
         for n in range(PCS_sampler.shape[0]):
@@ -405,22 +512,27 @@ class timeEncoder(object):
         else:
             return y_sinc_amps
 
-    def get_integrals(self, signal, spikes, Delta_t, q_shape):
-        q = np.zeros(q_shape)
-        start_index = 0
-        for ch in range(self.n_channels):
-            spike_times = spikes.get_spikes_of(ch)
-            spike_indices = [int(t / Delta_t) for t in spike_times]
-            signal_cum_sum = np.cumsum(Delta_t * signal[ch, :])
-            for i in range(len(spike_times) - 1):
-                q[start_index + i, ch] = (
-                    signal_cum_sum[spike_indices[i + 1]]
-                    - signal_cum_sum[spike_indices[i]]
-                )
-            start_index += len(spike_times) - 1
-        return q
+    def apply_g(
+        self,
+        G_pl,
+        q,
+        spikes,
+        t,
+        periodic=False,
+        Omega=None,
+        period=None,
+        n_components=None,
+    ):
+        assert (not periodic and Omega is not None) or (
+            periodic and (period is not None) and (n_components is not None)
+        ), "the type of signal is not consistent with the parameters given"
 
-    def apply_g(self, G_pl, q, spikes, t, Omega):
+        def Ki(t):
+            if periodic:
+                return Di(t, period, n_components)
+            else:
+                return Si(t, Omega)
+
         x = np.zeros_like(t)
         start_index = 0
         for ch in range(self.n_channels):
@@ -430,7 +542,7 @@ class timeEncoder(object):
 
             sici_upp_in = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T
             sici_low_in = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T
-            kernel = (Si(sici_upp_in, Omega) - Si(sici_low_in, Omega)) / (
+            kernel = (Ki(sici_upp_in) - Ki(sici_low_in)) / (
                 spikes_in_ch[1:, None] - spikes_in_ch[:-1, None]
             )
 

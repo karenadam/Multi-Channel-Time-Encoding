@@ -136,3 +136,33 @@ class TestLPFPCSsignal:
         assert (
             np.abs(samples_filtered[40] - samples_discrete_filtered[offset + 40]) < 1e-2
         )
+
+
+class TestBandlimitedPeriodicSignals:
+    def test_signal_generation(self):
+        omega = np.pi
+        try:
+            signal = periodicBandlimitedSignal(1 / omega, 3, [1, 2])
+        except AssertionError:
+            return
+        assert False
+
+    def test_signal_generation_2(self):
+        period = 1
+        signal = periodicBandlimitedSignal(period, 3, [1, -1, 3 - 1j])
+        t = np.arange(0, 1, 1e-3)
+        samples = signal.sample(t)
+        target = (
+            1
+            - 2 * np.cos(2 * np.pi * t)
+            + 2 * 3 * np.cos(4 * np.pi * t)
+            + 2 * np.sin(4 * np.pi * t)
+        )
+        assert np.linalg.norm(samples - target) < 1e-6
+
+    def test_signal_sampling(self):
+        period = 3
+        signal = periodicBandlimitedSignal(period, 2, [1, 2])
+        time = np.arange(0, 6, 0.5)
+        samples = signal.sample(time)
+        assert len(samples) == len(time)
