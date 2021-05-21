@@ -2,6 +2,7 @@ import numpy as np
 from scipy.special import sici
 from Helpers import *
 import copy
+import warnings
 
 
 class Signal(object):
@@ -14,20 +15,12 @@ class Signal(object):
 
 class SignalCollection(object):
     def __init__(self):
-        self._n_signals = 0
+        self.n_signals = 0
         self._signals = []
-
-    def get_n_signals(self):
-        return self._n_signals
-
-    def set_n_signals(self):
-        assert False, "Number of signals cannot be set!"
 
     def add(self, signal):
         self._signals.append(signal)
-        self._n_signals += 1
-
-    n_signals = property(get_n_signals, set_n_signals)
+        self.n_signals += 1
 
 
 class periodicBandlimitedSignal(Signal):
@@ -48,14 +41,18 @@ class periodicBandlimitedSignal(Signal):
         assert (
             len(values) == 2 * self._n_components - 1
         ), "You do not have as many coefficients as components"
-        # self._coefficients = [x.conjugate() for x in values[::-1]]
+
         self._coefficients = values
-        self._frequencies = (
-            np.arange(-self._n_components + 1, self._n_components, 1)
-            * 2
-            * np.pi
-            / self.period
-        )
+
+        if len(values) == 2 * self._n_components:
+            raise NotImplementedError
+        else:
+            self._frequencies = (
+                np.arange(-self._n_components + 1, self._n_components, 1)
+                * 2
+                * np.pi
+                / self.period
+            )
 
     def get_coefficients(self):
         return self._coefficients
@@ -85,22 +82,26 @@ class periodicBandlimitedSignal(Signal):
             0,
         )
         integral += self.coefficients[self._n_components - 1] * (t_end - t_start)
-        return integral
+        return np.real(integral)
 
     coefficients = property(get_coefficients, set_coefficients)
 
 
 class periodicBandlimitedSignals(SignalCollection):
-    def __init__(self, period, n_components=0, coefficient_values=[]):
+    def __init__(self, period, n_components=0, coefficient_values=None):
         self.period = period
         self._n_components = n_components
-        self._n_signals = len(coefficient_values)
+        self.n_signals = (
+            len(coefficient_values) if coefficient_values is not None else 0
+        )
         self._signals = []
-        for n in range(self._n_signals):
+        for n in range(self.n_signals):
             self._signals.append(
                 periodicBandlimitedSignal(period, n_components, coefficient_values[n])
             )
-        self.coefficient_values = coefficient_values
+        self.coefficient_values = (
+            coefficient_values if coefficient_values is not None else []
+        )
 
     def add(self, signal):
         assert signal.period == self.period
@@ -112,7 +113,7 @@ class periodicBandlimitedSignals(SignalCollection):
             assert self._n_components == signal._n_components
             self._signals.append(signal)
             self.coefficient_values.append(signal.coefficients)
-        self._n_signals += 1
+        self.n_signals += 1
 
     def get_signal(self, signal_index):
         return self._signals[signal_index]
@@ -125,18 +126,18 @@ class periodicBandlimitedSignals(SignalCollection):
         return new_signals
 
     def sample(self, t):
-        samples = np.zeros((self._n_signals, len(t)))
-        for n in range(self._n_signals):
+        samples = np.zeros((self.n_signals, len(t)), dtype="complex")
+        for n in range(self.n_signals):
             samples[n, :] = (self._signals[n]).sample(t)
         return np.real(samples)
 
 
 class bandlimitedSignal(Signal):
-    def __init__(self, Omega, sinc_locs=[], sinc_amps=[], padding=0):
-        self.n_sincs = len(sinc_locs)
+    def __init__(self, Omega, sinc_locs=None, sinc_amps=None, padding=0):
+        self.n_sincs = len(sinc_locs) if sinc_locs is not None else 0
         self.Omega = Omega
-        self.sinc_locs = sinc_locs
-        self.sinc_amps = sinc_amps
+        self.sinc_locs = sinc_locs if sinc_locs is not None else []
+        self.sinc_amps = sinc_amps if sinc_amps is not None else []
 
     def random(self, t, padding=0):
         delta_t = t[1] - t[0]
@@ -185,7 +186,7 @@ class bandlimitedSignal(Signal):
 
     def set_sinc_amps(self, sinc_amps):
         assert sinc_amps.shape == self.sinc_amps.shape
-        self.sinc_amps = copy.deepcopy(sinc_amps.tolist())
+        self.sinc_amps = sinc_amps.tolist()
 
     def get_sinc_locs(self):
         return self.sinc_locs
@@ -194,14 +195,16 @@ class bandlimitedSignal(Signal):
         return self.Omega
 
 
-class bandlimitedSignals(object):
-    def __init__(self, Omega, sinc_locs=[], sinc_amps=[], padding=0):
-        self.n_signals = len(sinc_amps)
+class bandlimitedSignals(SignalCollection):
+    def __init__(self, Omega, sinc_locs=None, sinc_amps=None, padding=0):
+        print(len(sinc_amps) if sinc_amps is not None else 0)
+
+        self.n_signals = len(sinc_amps) if sinc_amps is not None else 0
         self.signals = []
         for n in range(self.n_signals):
             self.signals.append(bandlimitedSignal(Omega, sinc_locs, sinc_amps[n]))
-        self.sinc_locs = sinc_locs
-        self.sinc_amps = sinc_amps
+        self.sinc_locs = sinc_locs if sinc_locs is not None else []
+        self.sinc_amps = sinc_amps if sinc_amps is not None else []
         self.Omega = Omega
 
     def get_n_signals(self):
@@ -211,7 +214,7 @@ class bandlimitedSignals(object):
         assert signal.Omega == self.Omega
         if len(self.signals) == 0:
             self.signals.append(signal)
-            self.sinc_locs = signal.get_sinc_locs()
+            self.sinc_locs = copy.deepcopy(signal.get_sinc_locs())
             self.sinc_amps.append(signal.get_sinc_amps().tolist())
         else:
             assert signal.get_sinc_locs() == self.sinc_locs

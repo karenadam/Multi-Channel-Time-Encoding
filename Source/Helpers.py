@@ -23,6 +23,19 @@ def Di(t, period, n_components):
     return integral
 
 
+def Di2(t, period, component):
+    if component == 0:
+        integral = t
+    else:
+        integral = (
+            1
+            / (component * 2 * np.pi / period)
+            * np.sin(component * 2 * np.pi / period * t)
+        )
+
+    return integral
+
+
 def Dii(t, period, n_components):
     component_range = np.arange(1, n_components)
     integral = 1 / (2 * period) * t ** 2
@@ -53,3 +66,21 @@ def exp_int(exponent, t_start, t_end, tolerance=1e-18):
         else:
             integrals[n, :] = t_end - t_start
     return integrals
+
+
+def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
+
+    X = np.zeros(shape)
+    n_iterations = 100000
+    for i in range(n_iterations):
+        error = sensing_matrix.dot(X.flatten()) - b.T
+        Y = X - lr * np.reshape(sensing_matrix.T.dot(error.T), shape)
+        Y[np.isnan(Y)] = 0
+        Y[np.isinf(Y)] = 0
+        # obtain the SVD and crop the singular values
+        U, s, Vh = np.linalg.svd(Y, full_matrices=True)
+        S = np.zeros((U.shape[1], Vh.shape[0]))
+        S[0:rank, 0:rank] = np.diag(s[0:rank])
+
+        X = U.dot(S).dot(Vh)
+    return X

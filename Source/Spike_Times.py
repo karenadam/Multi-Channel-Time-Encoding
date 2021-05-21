@@ -25,6 +25,13 @@ class spikeTimes(object):
             total_num += len(self.spikes[ch])
         return total_num
 
+    def get_total_num_spike_diffs(self):
+        total_num = 0
+        for ch in range(self.n_channels):
+            if len(self.spikes[ch]) > 0:
+                total_num += len(self.spikes[ch]) - 1
+        return total_num
+
     def get_n_spikes_of(self, channel):
         return len(self.spikes[channel])
 

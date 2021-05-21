@@ -3,7 +3,6 @@ import os
 import numpy as np
 
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../Source")
-from Time_Encoder import timeEncoder
 from Signal import (
     bandlimitedSignal,
     bandlimitedSignals,
@@ -11,9 +10,12 @@ from Signal import (
     periodicBandlimitedSignals,
 )
 from Spike_Times import spikeTimes
+from TEMParams import TEMParams
+from Encoder import DiscreteEncoder, ContinuousEncoder
+from Decoder import SSignalMChannelDecoder, MSignalMChannelDecoder
 
 
-class TestTimeEncoderPeriodicPeriodicWithStructure:
+class TestTimeEncoderPeriodicWithStructure:
     def test_single_signal_single_channel_bandlimited_period_encoding(self):
         kappa = 1
         delta = 1
@@ -29,10 +31,12 @@ class TestTimeEncoderPeriodicPeriodicWithStructure:
 
         b = np.max(np.abs(y)) + 1
 
-        tem_single = timeEncoder(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = tem_single.encode(y, delta_t)
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
+        spikes_single = DiscreteEncoder(tem_params).encode(
+            signal, signal_end_time=3, delta_t=delta_t
+        )
 
-        spikes_single_precise = tem_single.encode_precise(signals, time[-1])
+        spikes_single_precise = ContinuousEncoder(tem_params).encode(signals, time[-1])
 
         assert (
             np.mean(
@@ -55,8 +59,8 @@ class TestTimeEncoderPeriodicPeriodicWithStructure:
         spikes = spikeTimes(n_channels=1)
         spikes.add(0, [0.5, 2, 2.5, 3])
 
-        tem_single = timeEncoder(kappa, delta, b, mixing_matrix=[[1]])
-        q, G = tem_single.get_closed_form_matrices(
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
+        q, G = SSignalMChannelDecoder(tem_params).get_closed_form_matrices(
             spikes, periodic=True, period=period, n_components=n_components
         )
         target_q = [0.5, 1.5, 1.5]
@@ -75,15 +79,15 @@ class TestTimeEncoderPeriodicPeriodicWithStructure:
         total_integral = signal.get_precise_integral(0, 3)
         signals = periodicBandlimitedSignals(period, coefficient_values=[])
         signals.add(signal)
-        tem_single = timeEncoder(
+        tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1]], integrator_init=[delta]
         )
-        spikes_single = tem_single.encode_precise(signals, period)
+        spikes_single = ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
         spikes = spikeTimes(n_channels=1)
 
-        rec_single = tem_single.decode(
+        rec_single = SSignalMChannelDecoder(tem_params).decode(
             spikes_single, time, periodic=True, period=period, n_components=n_components
         )
         start_index = int(len(y) / 10)
@@ -108,15 +112,15 @@ class TestTimeEncoderPeriodicPeriodicWithStructure:
         total_integral = signal.get_precise_integral(0, 3)
         signals = periodicBandlimitedSignals(period, coefficient_values=[])
         signals.add(signal)
-        tem_single = timeEncoder(
+        tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1], [1]], integrator_init=[-delta, 0]
         )
-        spikes_single = tem_single.encode_precise(signals, period)
+        spikes_single = ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
         spikes = spikeTimes(n_channels=1)
 
-        rec_single = tem_single.decode(
+        rec_single = SSignalMChannelDecoder(tem_params).decode(
             spikes_single, time, periodic=True, period=period, n_components=n_components
         )
         start_index = int(len(y) / 10)
@@ -142,13 +146,13 @@ class TestTimeEncoderPeriodicPeriodicWithStructure:
         signals = periodicBandlimitedSignals(period, coefficient_values=[])
         signals.add(signal)
         signals.add(signal2)
-        tem_single = timeEncoder(
+        tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1, -2], [1, 0.5], [0.1, 0.7]]
         )
-        spikes = tem_single.encode_precise(signals, period)
+        spikes = ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
-        rec = tem_single.decode_bilinear_measurements(
+        rec = MSignalMChannelDecoder(tem_params).decode_periodic(
             spikes, time, periodic=True, period=period, n_components=n_components
         )
         start_index = int(len(y) / 10)
@@ -188,15 +192,15 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
 
         b = np.max(np.abs(y)) + 1
 
-        tem_single = timeEncoder(kappa, delta, b, mixing_matrix)
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix)
 
-        spikes_single_precise = tem_single.encode_precise(signals, time[-1])
+        spikes_single_precise = ContinuousEncoder(tem_params).encode(signals, time[-1])
         # spikes_single_precise.print()
 
         spikes_0 = spikes_single_precise.get_spikes_of(0)
         sinc_locs = (spikes_0[:-1] + spikes_0[1:]) / 2
 
-        rec_single = tem_single.decode_mixed(
+        rec_single = MSignalMChannelDecoder(tem_params).decode(
             spikes_single_precise, time, sinc_locs, 2 * np.pi / period, delta_t
         )
 
@@ -245,15 +249,15 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
 
         b = np.max(np.abs(y)) + 1
 
-        tem_single = timeEncoder(kappa, delta, b, mixing_matrix)
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix)
 
-        spikes_single_precise = tem_single.encode_precise(signals, time[-1])
+        spikes_single_precise = ContinuousEncoder(tem_params).encode(signals, time[-1])
         # spikes_single_precise.print()
 
         spikes_0 = spikes_single_precise.get_spikes_of(0)
         sinc_locs = (spikes_0[:-1] + spikes_0[1:]) / 2
 
-        rec_single = tem_single.decode_mixed(
+        rec_single = MSignalMChannelDecoder(tem_params).decode(
             spikes_single_precise, time, sinc_locs, 2 * np.pi / period, delta_t
         )
 
