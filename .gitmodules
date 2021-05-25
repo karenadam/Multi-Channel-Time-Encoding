@@ -1,6 +1,0 @@
-[submodule "Private-TEM"]
-	path = Private-TEM
-	url = https://github.com/karenadam/Private-TEM
-[submodule "Source/Singular-Value-Thresholding"]
-	path = Source/Singular-Value-Thresholding
-	url = https://github.com/karenadam/Singular-Value-Thresholding.git
