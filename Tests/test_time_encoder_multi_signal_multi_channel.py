@@ -2,17 +2,19 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../Source")
-from Signal import (
-    bandlimitedSignal,
-    bandlimitedSignals,
-    periodicBandlimitedSignal,
-    periodicBandlimitedSignals,
-)
-from Spike_Times import spikeTimes
-from TEMParams import TEMParams
-from Encoder import DiscreteEncoder, ContinuousEncoder
-from Decoder import MSignalMChannelDecoder
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+from src import *
+
+# from Signal import (
+#     bandlimitedSignal,
+#     bandlimitedSignals,
+#     periodicBandlimitedSignal,
+#     periodicBandlimitedSignals,
+# )
+# from Spike_Times import spikeTimes
+# from TEMParams import TEMParams
+# from Encoder import DiscreteEncoder, ContinuousEncoder
+# from Decoder import MSignalMChannelDecoder
 
 
 class TestTimeEncoderMultiSignalMultiChannel:
@@ -26,12 +28,12 @@ class TestTimeEncoderMultiSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original1 = bandlimitedSignal(omega)
+        original1 = Signal.bandlimitedSignal(omega)
         original1.random(t)
         np.random.seed(11)
-        original2 = bandlimitedSignal(omega)
+        original2 = Signal.bandlimitedSignal(omega)
         original2.random(t)
-        signals = bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        signals = Signal.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         signals.add(original1)
         signals.add(original2)
         y = signals.sample(t)
@@ -39,9 +41,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = ContinuousEncoder(tem_params).encode(signals, t[-1])
+        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, t[-1])
 
-        rec_mult = MSignalMChannelDecoder(tem_params).decode(
+        rec_mult = Decoder.MSignalMChannelDecoder(tem_params).decode(
             spikes_mult, t, original1.get_sinc_locs(), omega, delta_t
         )
 
@@ -71,24 +73,24 @@ class TestTimeEncoderMultiSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         y_param = []
         np.random.seed(10)
-        original1 = bandlimitedSignal(omega)
+        original1 = Signal.bandlimitedSignal(omega)
         original1.random(t)
         np.random.seed(11)
-        original2 = bandlimitedSignal(omega)
+        original2 = Signal.bandlimitedSignal(omega)
         original2.random(t)
         y = np.zeros((2, len(t)))
         y[0, :] = original1.sample(t)
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
         A = [[0.9, 0.1], [0.2, 0.8], [1, 1]]
-        y_param = bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        y_param = Signal.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         y_param.add(original1)
         y_param.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = MSignalMChannelDecoder(tem_params).decode(
+        rec_mult = Decoder.MSignalMChannelDecoder(tem_params).decode(
             spikes_mult, t, original1.get_sinc_locs(), omega, delta_t
         )
 
@@ -120,17 +122,17 @@ class TestTimeEncoderMultiSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         y_param = []
         np.random.seed(10)
-        original1 = bandlimitedSignal(omega)
+        original1 = Signal.bandlimitedSignal(omega)
         original1.random(t)
         np.random.seed(11)
-        original2 = bandlimitedSignal(omega)
+        original2 = Signal.bandlimitedSignal(omega)
         original2.random(t)
         y = np.zeros((2, len(t)))
         y[0, :] = original1.sample(t)
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
         A = [[0.9, 0.1], [0.2, 0.8], [1, 1]]
-        y_param = bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        y_param = Signal.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         y_param.add(original1)
         y_param.add(original2)
 
@@ -139,9 +141,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         # signal_set.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = MSignalMChannelDecoder(tem_params).decode(
+        rec_mult = Decoder.MSignalMChannelDecoder(tem_params).decode(
             spikes_mult, t, Omega=omega, sinc_locs=original1.get_sinc_locs(), Delta_t=0
         )
 

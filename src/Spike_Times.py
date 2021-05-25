@@ -1,4 +1,4 @@
-import numpy as np
+from src import *
 
 
 class spikeTimes(object):

@@ -1,12 +1,4 @@
-import numpy as np
-from scipy.special import sici
-import numpy.matlib
-import bisect
-import copy
-from Helpers import Si, Sii, sinc, exp_int, Di, Dii, singular_value_projection_w_matrix
-from Signal import *
-from Spike_Times import spikeTimes
-import time
+from src import *
 
 
 class Decoder(object):
@@ -34,9 +26,9 @@ class Decoder(object):
 
         def Ki(t):
             if periodic:
-                return Di(t, period, n_components)
+                return Helpers.Di(t, period, n_components)
             else:
-                return Si(t, Omega)
+                return Helpers.Si(t, Omega)
 
         x = np.zeros_like(t)
         start_index = 0
@@ -73,9 +65,9 @@ class Decoder(object):
 
         def Kii(t):
             if periodic:
-                return Dii(t, period, n_components)
+                return Helpers.Dii(t, period, n_components)
             else:
-                return Sii(t, Omega)
+                return Helpers.Sii(t, Omega)
 
         q = np.zeros((n_spikes - self.n_channels, self.n_channels))
         G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
@@ -189,11 +181,11 @@ class MSignalMChannelDecoder(Decoder):
         ]
         values = [[0] * (len(discontinuities[ch]) - 1) for ch in range(self.n_channels)]
 
-        PCSSignal = piecewiseConstantSignals(discontinuities, values)
-        Ysincs = bandlimitedSignals(
+        PCSSignal = Signal.piecewiseConstantSignals(discontinuities, values)
+        Ysincs = Signal.bandlimitedSignals(
             Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_channels
         )
-        Xsincs = bandlimitedSignals(
+        Xsincs = Signal.bandlimitedSignals(
             Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_signals
         )
 
@@ -221,7 +213,9 @@ class MSignalMChannelDecoder(Decoder):
         x_sinc_amps = ps_inv.dot(Mback).dot(PCS_sampler).dot(q)
 
         x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
-        x_param = bandlimitedSignals(Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps)
+        x_param = Signal.bandlimitedSignals(
+            Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps
+        )
 
         if return_as_param:
             return x_param
@@ -263,7 +257,7 @@ class MSignalMChannelDecoder(Decoder):
                 1j * 2 * np.pi / period * np.arange(-n_components + 1, n_components, 1)
             )
             for n in range(n_spikes_in_ch - 1):
-                integrals = exp_int(
+                integrals = Helpers.exp_int(
                     components, [spikes_in_ch[n]], [spikes_in_ch[n + 1]]
                 )
                 integrals[n_components - 1] = spikes_in_ch[n + 1] - spikes_in_ch[n]
@@ -278,7 +272,7 @@ class MSignalMChannelDecoder(Decoder):
             recovered_coefficients_flattened, (self.n_signals, 2 * n_components - 1)
         )
 
-        x_param = periodicBandlimitedSignals(
+        x_param = Signal.periodicBandlimitedSignals(
             period, n_components, recovered_coefficients
         )
         if return_as_param:
@@ -354,9 +348,9 @@ class UnknownMixingDecoder(Decoder):
 
         def Ki(t):
             if periodic:
-                return Di(t, period, n_components)
+                return Helpers.Di(t, period, n_components)
             else:
-                return Si(t, Omega)
+                return Helpers.Si(t, Omega)
 
         start_index_i = 0
         start_index_j = 0
@@ -385,8 +379,8 @@ class UnknownMixingDecoder(Decoder):
                         start_index_i + sp_i,
                         ch * n_unknowns_per_ch : (ch + 1) * n_unknowns_per_ch,
                     ] = [
-                        Di2(spikes_in_ch[sp_i + 1], period, component)
-                        - Di2(spikes_in_ch[sp_i], period, component)
+                        Helpers.Di2(spikes_in_ch[sp_i + 1], period, component)
+                        - Helpers.Di2(spikes_in_ch[sp_i], period, component)
                         for component in components
                     ]
 
@@ -428,12 +422,12 @@ class UnknownMixingDecoder(Decoder):
 
         G_inv = np.linalg.pinv(G)
         G_inv = G.T.dot(np.linalg.pinv(G.dot(G.T)))
-        C_y = singular_value_projection_w_matrix(
+        C_y = Helpers.singular_value_projection_w_matrix(
             shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-3, lr=0.5
         )
 
         if not periodic:
-            y_param = bandlimitedSignals(Omega, sinc_locs, sinc_amps=C_y)
+            y_param = Signal.bandlimitedSignals(Omega, sinc_locs, sinc_amps=C_y)
         else:
-            y_param = periodicBandlimitedSignals(period, n_components, C_y)
+            y_param = Signal.periodicBandlimitedSignals(period, n_components, C_y)
         return y_param.sample(t)

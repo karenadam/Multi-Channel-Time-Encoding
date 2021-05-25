@@ -1,15 +1,4 @@
-import numpy as np
-from scipy.special import sici
-import numpy.matlib
-import bisect
-import copy
-from Helpers import Si, Sii, sinc, exp_int, Di, Dii
-from Signal import *
-from Spike_Times import spikeTimes
-import time
-
-import sys
-import os
+from src import *
 
 
 class Encoder(object):
@@ -26,7 +15,9 @@ class DiscreteEncoder(Encoder):
         self.__dict__.update(self.params.__dict__)
 
         spikes = spikeTimes(self.n_channels)
-        if isinstance(signal, Signal) or isinstance(signal, SignalCollection):
+        if isinstance(signal, Signal.Signal) or isinstance(
+            signal, Signal.SignalCollection
+        ):
             sampled = signal.sample(np.arange(0, signal_end_time, delta_t))
         else:
             sampled = signal
@@ -145,8 +136,8 @@ class ContinuousEncoder(Encoder):
     ):
 
         self.__dict__.update(self.params.__dict__)
-        assert isinstance(x_param, bandlimitedSignals) or isinstance(
-            x_param, periodicBandlimitedSignals
+        assert isinstance(x_param, Signal.bandlimitedSignals) or isinstance(
+            x_param, Signal.periodicBandlimitedSignals
         )
         n_signals = x_param.n_signals
 

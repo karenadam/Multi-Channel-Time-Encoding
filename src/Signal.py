@@ -1,8 +1,4 @@
-import numpy as np
-from scipy.special import sici
-from Helpers import *
-import copy
-import warnings
+from src import *
 
 
 class Signal(object):
@@ -157,7 +153,9 @@ class bandlimitedSignal(Signal):
     def sample(self, t):
         signal = np.zeros_like(t)
         for i in range(len(self.sinc_locs)):
-            signal += self.sinc_amps[i] * sinc(t - self.sinc_locs[i], self.Omega)
+            signal += self.sinc_amps[i] * Helpers.sinc(
+                t - self.sinc_locs[i], self.Omega
+            )
         return signal
 
     def get_sincs(self):
@@ -172,8 +170,8 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                Si(t_end.T - sinc_locs, self.Omega)
-                - Si(t_start.T - sinc_locs, self.Omega)
+                Helpers.Si(t_end.T - sinc_locs, self.Omega)
+                - Helpers.Si(t_start.T - sinc_locs, self.Omega)
             ),
             1,
         )
@@ -280,9 +278,9 @@ class bandlimitedSignals(SignalCollection):
             integ_low_limit = t_start[signal_index]
             num_values = len(self.sinc_amps[signal_index])
             for integral_index in range(num_integrals):
-                multiplier_vector = Si(
+                multiplier_vector = Helpers.Si(
                     integ_up_limit[integral_index] - sinc_locs, self.Omega
-                ) - Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
+                ) - Helpers.Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
                 sinc_integral_matrix[
                     matrix_row_index,
                     matrix_column_index : matrix_column_index + num_values,
@@ -396,9 +394,9 @@ class piecewiseConstantSignals(object):
             for sample_index in range(num_samples):
                 low_limit = self.discontinuities[signal_index][:-1]
                 up_limit = self.discontinuities[signal_index][1:]
-                multiplier_vector = Si(
+                multiplier_vector = Helpers.Si(
                     sample_locs[sample_index] - low_limit, omega
-                ) - Si(sample_locs[sample_index] - up_limit, omega)
+                ) - Helpers.Si(sample_locs[sample_index] - up_limit, omega)
                 PCS_sampler_matrix[
                     matrix_row_index,
                     matrix_column_index : matrix_column_index + num_values,
@@ -423,8 +421,8 @@ class lPFedPCSSignal(object):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                Si(t - self.discontinuities[value_index], self.omega)
-                - Si(t - self.discontinuities[value_index + 1], self.omega)
+                Helpers.Si(t - self.discontinuities[value_index], self.omega)
+                - Helpers.Si(t - self.discontinuities[value_index + 1], self.omega)
             )
         return samples
 

@@ -2,13 +2,17 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../Source")
-# from Time_Encoder import timeEncoder
-from TEMParams import TEMParams
-from Encoder import *
-from Decoder import *
-from Signal import *
-from Multi_Dimensional_Signal import *
+# sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
+
+from src import *
+
+# from TimeEncoding import *
+# from TEMParams import TEMParams
+# from Encoder import *
+# from Decoder import *
+# from Signal import *
+# from Multi_Dimensional_Signal import *
 
 import scipy
 import scipy.signal
@@ -25,7 +29,7 @@ class TestBandlimitedSignal:
         sinc_locs = [1.3, 2.8, 7.2]
         sinc_amps = [1, 5, 3]
         Omega = np.pi
-        signal = bandlimitedSignal(Omega, sinc_locs, sinc_amps)
+        signal = Signal.bandlimitedSignal(Omega, sinc_locs, sinc_amps)
         t_int_0 = np.arange(2, 7, 0.01)
         t_int_1 = np.arange(4, 8, 0.01)
         discrete_integral_0 = signal.get_total_integral(t_int_0)
@@ -47,7 +51,7 @@ class TestBandlimitedSignals:
         sinc_locs = [1, 2, 3]
         sinc_amps = [[3, 2, 6], [1, -2, 4]]
         omega = np.pi
-        signals = bandlimitedSignals(omega, sinc_locs, sinc_amps)
+        signals = Signal.bandlimitedSignals(omega, sinc_locs, sinc_amps)
         t_start = [[0, 1.5, 3], [0.5, 2]]
         t_end = [[1.5, 3, 4], [2, 3]]
         integrals = signals.get_integrals(t_start, t_end)
@@ -61,7 +65,7 @@ class TestBandlimitedSignals:
         sinc_locs = [1, 2, 3]
         sinc_amps = [[1, 0, 1], [1, 1, 0]]
         omega = np.pi
-        signals = bandlimitedSignals(omega, sinc_locs, sinc_amps)
+        signals = Signal.bandlimitedSignals(omega, sinc_locs, sinc_amps)
         mixed_amplitudes = signals.mix_amplitudes([[2, 1], [1, 0]])
         expected_amplitudes = [3, 1, 2, 1, 0, 1]
 
@@ -72,7 +76,7 @@ class TestPiecewiseConstantSignal:
     def test_sampling(self):
         discontinuities = [1, 2]
         values = [1]
-        signal = piecewiseConstantSignal(discontinuities, values)
+        signal = Signal.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample([0, 0.1, 1.2, 1.5, 1.7, 2.3, 3.5])
         assert samples[0] == 0
         assert samples[1] == 0
@@ -85,7 +89,7 @@ class TestPiecewiseConstantSignal:
     def test_sampling2(self):
         discontinuities = [1, 2, 5, 6]
         values = [1, 4, -2]
-        signal = piecewiseConstantSignal(discontinuities, values)
+        signal = Signal.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample([0, 0.1, 1.2, 1.5, 1.7, 2.3, 3.5, 5.6, 6.5])
         assert samples[0] == 0
         assert samples[1] == 0
@@ -102,7 +106,7 @@ class TestPiecewiseConstantSignals:
     def test_creation(self):
         discontinuities = [[1, 2], [1.5, 4]]
         values = [[1], [-2]]
-        signals = piecewiseConstantSignals(discontinuities, values)
+        signals = Signal.piecewiseConstantSignals(discontinuities, values)
         signal_1 = signals.get_signal(1)
         assert signal_1.get_discontinuities() == [1.5, 4]
         assert signal_1.get_values() == [-2]
@@ -110,7 +114,7 @@ class TestPiecewiseConstantSignals:
     def test_sampling(self):
         discontinuities = [[1, 2, 4, 6, 7, 8], [1.5, 4, 7, 9, 10]]
         values = [[1, 3, 4, -2, 3], [-2, 1, 3, -1]]
-        signals = piecewiseConstantSignals(discontinuities, values)
+        signals = Signal.piecewiseConstantSignals(discontinuities, values)
         signal_1 = signals.get_signal(1)
 
         sample_locs = [0, 1.5, 3]
@@ -130,12 +134,12 @@ class TestLPFPCSsignal:
         discontinuities = [1, 2, 5, 6]
         values = [1, 4, -2]
         t = np.arange(0, 10, 0.1)
-        signal = piecewiseConstantSignal(discontinuities, values)
+        signal = Signal.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample(t)
         filtered_signal = signal.low_pass_filter(omega)
         samples_filtered = filtered_signal.sample(t)
 
-        sampled_sinc = sinc(t - 5, omega)
+        sampled_sinc = Helpers.sinc(t - 5, omega)
         samples_discrete_filtered = scipy.signal.convolve(samples, sampled_sinc) * (
             t[1] - t[0]
         )
@@ -150,14 +154,14 @@ class TestBandlimitedPeriodicSignals:
     def test_signal_generation(self):
         omega = np.pi
         try:
-            signal = periodicBandlimitedSignal(1 / omega, 3, [1, 2])
+            signal = Signal.periodicBandlimitedSignal(1 / omega, 3, [1, 2])
         except AssertionError:
             return
         assert False
 
     def test_signal_generation_2(self):
         period = 1
-        signal = periodicBandlimitedSignal(period, 3, [1, -1, 3 - 1j])
+        signal = Signal.periodicBandlimitedSignal(period, 3, [1, -1, 3 - 1j])
         t = np.arange(0, 1, 1e-3)
         samples = signal.sample(t)
         target = (
@@ -170,7 +174,7 @@ class TestBandlimitedPeriodicSignals:
 
     def test_signal_sampling(self):
         period = 3
-        signal = periodicBandlimitedSignal(period, 2, [1, 2])
+        signal = Signal.periodicBandlimitedSignal(period, 2, [1, 2])
         time = np.arange(0, 6, 0.5)
         samples = signal.sample(time)
         assert len(samples) == len(time)
@@ -417,7 +421,7 @@ class TestMultiDimPeriodicSignal:
 
         num_spikes = 8
 
-        signals = periodicBandlimitedSignals(period=video.periods[-1])
+        signals = Signal.periodicBandlimitedSignals(period=video.periods[-1])
         deltas = []
 
         for TEM_l in TEM_locations:
@@ -430,12 +434,12 @@ class TestMultiDimPeriodicSignal:
         kappa, b = 1, 0
         tem_mult = TEMParams(kappa, deltas, b, np.eye(len(TEM_locations)))
         end_time = video.periods[-1]
-        spikes = ContinuousEncoder(tem_mult).encode(
+        spikes = Encoder.ContinuousEncoder(tem_mult).encode(
             signals, end_time, tol=1e-14, with_start_time=False
         )
         # spikes = ContinuousEncoder(tem_mult).encode_video(video, TEM_locations,end_time, tol=1e-14, with_start_time = False)
 
-        integrals, integral_start_coordinates, integral_end_coordinates = MSignalMChannelDecoder(
+        integrals, integral_start_coordinates, integral_end_coordinates = Decoder.MSignalMChannelDecoder(
             tem_mult
         ).get_vid_constraints(
             spikes, TEM_locations

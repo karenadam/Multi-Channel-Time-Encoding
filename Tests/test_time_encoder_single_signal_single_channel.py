@@ -2,17 +2,19 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../Source")
-from Signal import (
-    bandlimitedSignal,
-    bandlimitedSignals,
-    periodicBandlimitedSignal,
-    periodicBandlimitedSignals,
-)
-from Spike_Times import spikeTimes
-from TEMParams import *
-from Encoder import *
-from Decoder import *
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+from src import *
+
+# from Signal import (
+#     bandlimitedSignal,
+#     bandlimitedSignals,
+#     periodicBandlimitedSignal,
+#     periodicBandlimitedSignals,
+# )
+# from Spike_Times import spikeTimes
+# from TEMParams import *
+# from Encoder import *
+# from Decoder import *
 
 
 class TestTimeEncoderSingleSignalSingleChannel:
@@ -33,16 +35,16 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = bandlimitedSignal(omega)
+        original = Signal.bandlimitedSignal(omega)
         original.random(t)
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = DiscreteEncoder(tem_params).encode(
+        spikes_single = Encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=15, delta_t=delta_t
         )
-        rec_single = SSignalMChannelDecoder(tem_params).decode(
+        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
             spikes_single, t, periodic=False, Omega=omega
         )
         start_index = int(len(y) / 10)
@@ -61,16 +63,16 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = bandlimitedSignal(omega)
+        original = Signal.bandlimitedSignal(omega)
         original.random(t)
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
 
-        encoder = DiscreteEncoder(tem_params)
+        encoder = Encoder.DiscreteEncoder(tem_params)
         spikes_single = encoder.encode(original, signal_end_time=15, delta_t=delta_t)
-        decoder = SSignalMChannelDecoder(tem_params)
+        decoder = Decoder.SSignalMChannelDecoder(tem_params)
         rec_single = decoder.decode(spikes_single, t, periodic=False, Omega=omega)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
@@ -89,17 +91,17 @@ class TestTimeEncoderSingleSignalSingleChannel:
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
         x_param = []
-        original = bandlimitedSignal(omega)
+        original = Signal.bandlimitedSignal(omega)
         original.random(t)
         x_param.append(original)
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
-        signal = bandlimitedSignals(omega)
+        signal = Signal.bandlimitedSignals(omega)
         signal.add(original)
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = ContinuousEncoder(tem_params).encode(signal, t[-1])
-        rec_single = SSignalMChannelDecoder(tem_params).decode(
+        spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
+        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
             spikes_single, t, periodic=False, Omega=omega
         )
         start_index = int(len(y) / 10)

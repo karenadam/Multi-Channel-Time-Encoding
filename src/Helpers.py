@@ -1,5 +1,4 @@
-import numpy as np
-from scipy.special import sici
+from src import *
 
 
 def Si(t, Omega):

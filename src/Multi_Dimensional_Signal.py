@@ -1,7 +1,4 @@
-import numpy as np
-import scipy
-import copy
-from Signal import periodicBandlimitedSignal
+from src import *
 
 
 class _MultiDimSignal(object):
@@ -135,7 +132,7 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             axis=tuple([i for i in range(self.numDimensions - 1)]),
         )
         time_components_reshuffled = np.roll(time_components, int(self.periods[-1] / 2))
-        return periodicBandlimitedSignal(
+        return Signal.periodicBandlimitedSignal(
             self.periods[-1], self.n_t_components, time_components_reshuffled
         )
 
