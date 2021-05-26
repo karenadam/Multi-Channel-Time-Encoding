@@ -195,7 +195,6 @@ class bandlimitedSignal(Signal):
 
 class bandlimitedSignals(SignalCollection):
     def __init__(self, Omega, sinc_locs=None, sinc_amps=None, padding=0):
-        print(len(sinc_amps) if sinc_amps is not None else 0)
 
         self.n_signals = len(sinc_amps) if sinc_amps is not None else 0
         self.signals = []

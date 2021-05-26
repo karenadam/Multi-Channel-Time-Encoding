@@ -151,10 +151,6 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             )
         )
         linear_operator = np.zeros((0, 2 * np.product(self.num_components)))
-
-        import pudb
-
-        # pudb.set_trace()
         augmented_integrals = np.zeros((linear_operator.shape[0], 1))
         augmented_integrals = np.zeros((0, 1))
 
