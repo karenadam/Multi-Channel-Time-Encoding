@@ -70,9 +70,15 @@ def exp_int(exponent, t_start, t_end, tolerance=1e-18):
 def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
 
     X = np.zeros(shape)
+    # TODO check if this should stay here or not
+    # i.e. run tests again for unknown case
+    X = np.reshape( np.linalg.lstsq(sensing_matrix,b, rcond = None)[0] , shape)
     n_iterations = 100000
     for i in range(n_iterations):
         error = sensing_matrix.dot(X.flatten()) - b.T
+        if i>0 and np.linalg.norm(error) < len(error)*tol:
+            print("exited at iteration ", i)
+            break
         Y = X - lr * np.reshape(sensing_matrix.T.dot(error.T), shape)
         Y[np.isnan(Y)] = 0
         Y[np.isinf(Y)] = 0
