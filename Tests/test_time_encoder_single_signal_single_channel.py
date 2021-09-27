@@ -5,7 +5,7 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
 from src import *
 
-# from Signal import (
+# from Signals import (
 #     bandlimitedSignal,
 #     bandlimitedSignals,
 #     periodicBandlimitedSignal,

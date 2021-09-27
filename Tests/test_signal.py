@@ -11,7 +11,7 @@ from src import *
 # from TEMParams import TEMParams
 # from Encoder import *
 # from Decoder import *
-# from Signal import *
+# from Signals import *
 # from Multi_Dimensional_Signal import *
 
 import scipy

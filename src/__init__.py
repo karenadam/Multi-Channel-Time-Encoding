@@ -6,7 +6,8 @@ import copy
 import time
 import src.Helpers
 from .TEMParams import *
-import src.Signal
+import src.Signals.Signal as Signal
+import src.Signals.FRISignal as FRISignal
 from .Spike_Times import *
 import src.Encoder
 import src.Decoder
