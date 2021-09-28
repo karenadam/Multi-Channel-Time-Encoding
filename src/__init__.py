@@ -12,3 +12,4 @@ from .Spike_Times import *
 import src.Encoder
 import src.Decoder
 from .Multi_Dimensional_Signal import *
+from .Layer import *

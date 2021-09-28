@@ -85,18 +85,8 @@ class Decoder(object):
             for ch_j in range(self.n_channels):
                 n_spikes_in_ch_j = spikes.get_n_spikes_of(ch_j)
                 spikes_in_ch_j = spikes.get_spikes_of(ch_j)
-                spike_midpoints_j = spikes.get_midpoints(ch_j)
 
-                t_k_matrix = np.transpose(
-                    np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1)
-                )
-                t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
-
-                sum_k_l = t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]
-                sum_k1_l1 = t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]
-                sum_k1_l = t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
-                sum_k_l1 = t_k_matrix[:-1, :-1] - t_l_matrix[1:, 1:]
-                diff_l1_l = t_l_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
+                sum_k_l, sum_k1_l1, sum_k1_l, sum_k_l1, diff_l1_l = self.get_integral_start_and_end_points(spikes_in_ch, spikes_in_ch_j)
 
                 G[
                     start_index : start_index + n_spikes_in_ch - 1,
@@ -113,6 +103,21 @@ class Decoder(object):
             q = np.sum(q, 1)
 
         return q, G
+
+    def get_integral_start_and_end_points(self, spikes_in_ch, spikes_in_ch_j):
+        n_spikes_in_ch_j = len(spikes_in_ch_j)
+        n_spikes_in_ch = len(spikes_in_ch)
+
+        t_k_matrix = np.transpose(
+            np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1)
+        )
+        t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
+        sum_k_l = t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]
+        sum_k1_l1 = t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]
+        sum_k1_l = t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
+        sum_k_l1 = t_k_matrix[:-1, :-1] - t_l_matrix[1:, 1:]
+        diff_l1_l = t_l_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
+        return sum_k_l, sum_k1_l1, sum_k1_l, sum_k_l1, diff_l1_l
 
 
 class SSignalMChannelDecoder(Decoder):

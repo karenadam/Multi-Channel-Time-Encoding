@@ -189,39 +189,39 @@ class TestFriSignal:
 
 
 
-    def test_can_find_annihilator_single_signal_w_constraints_only(self):
-        num_diracs = 10
-        num_signals = 5
-        t_k = 2*np.random.random(size = (num_diracs))
-        c_k_1 = 2*(np.random.random(size = (num_diracs)) - 0.5)
-        c_k_2 = 2*(np.random.random(size = (num_diracs)) - 0.5)
-
-        M = num_diracs + 1
-        c_k = []
-        fri_signals = []
-        f_s_coefficients = []
-        random_sensing_matrices = []
-        measurements = []
-        for n_s in range(num_signals):
-            c_k.append(2*(np.random.random(size = (num_diracs)) - 0.5))
-            fri_signals.append(src.FRISignal.FRISignal(t_k, c_k[n_s], 2.0))
-            f_s_coefficients.append(fri_signals[n_s].get_fourier_series(np.arange(-M, M+1,1).T))
-            random_sensing_matrices.append(np.random.random(size = (len(f_s_coefficients[n_s].flatten())-1, len(f_s_coefficients[n_s].flatten()))))
-            measurements.append(random_sensing_matrices[n_s].dot(f_s_coefficients[n_s]))
-
-        recovered_circ_matrix = self.recover_from_meas(random_sensing_matrices, measurements,num_diracs, num_signals)
-
-        # a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
-        # print(a_filter.get_filter_coefficients())
-        # result = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients)
-        # assert np.allclose(result[M-1:-M+1:1], np.zeros_like(result[M-1:-M+1:1]))
-        print("FS 1: ", self.get_circular_matrix(f_s_coefficients[0], num_diracs))
-        print("FS 2: ", self.get_circular_matrix(f_s_coefficients[1], num_diracs))
-        print("recovered: ", recovered_circ_matrix)
-        stacked_circular_matrices = self.get_circular_matrix(f_s_coefficients[0], num_diracs)
-        for n_s in range(1, num_signals):
-            stacked_circular_matrices = np.concatenate((stacked_circular_matrices, self.get_circular_matrix(f_s_coefficients[n_s], num_diracs)))
-        assert np.allclose(recovered_circ_matrix.flatten(), stacked_circular_matrices.flatten())
+    # def test_can_find_annihilator_single_signal_w_constraints_only(self):
+    #     num_diracs = 10
+    #     num_signals = 5
+    #     t_k = 2*np.random.random(size = (num_diracs))
+    #     c_k_1 = 2*(np.random.random(size = (num_diracs)) - 0.5)
+    #     c_k_2 = 2*(np.random.random(size = (num_diracs)) - 0.5)
+    #
+    #     M = num_diracs + 1
+    #     c_k = []
+    #     fri_signals = []
+    #     f_s_coefficients = []
+    #     random_sensing_matrices = []
+    #     measurements = []
+    #     for n_s in range(num_signals):
+    #         c_k.append(2*(np.random.random(size = (num_diracs)) - 0.5))
+    #         fri_signals.append(src.FRISignal.FRISignal(t_k, c_k[n_s], 2.0))
+    #         f_s_coefficients.append(fri_signals[n_s].get_fourier_series(np.arange(-M, M+1,1).T))
+    #         random_sensing_matrices.append(np.random.random(size = (len(f_s_coefficients[n_s].flatten())-1, len(f_s_coefficients[n_s].flatten()))))
+    #         measurements.append(random_sensing_matrices[n_s].dot(f_s_coefficients[n_s]))
+    #
+    #     recovered_circ_matrix = self.recover_from_meas(random_sensing_matrices, measurements,num_diracs, num_signals)
+    #
+    #     # a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
+    #     # print(a_filter.get_filter_coefficients())
+    #     # result = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients)
+    #     # assert np.allclose(result[M-1:-M+1:1], np.zeros_like(result[M-1:-M+1:1]))
+    #     print("FS 1: ", self.get_circular_matrix(f_s_coefficients[0], num_diracs))
+    #     print("FS 2: ", self.get_circular_matrix(f_s_coefficients[1], num_diracs))
+    #     print("recovered: ", recovered_circ_matrix)
+    #     stacked_circular_matrices = self.get_circular_matrix(f_s_coefficients[0], num_diracs)
+    #     for n_s in range(1, num_signals):
+    #         stacked_circular_matrices = np.concatenate((stacked_circular_matrices, self.get_circular_matrix(f_s_coefficients[n_s], num_diracs)))
+    #     assert np.allclose(recovered_circ_matrix.flatten(), stacked_circular_matrices.flatten())
 
         # assert False
 

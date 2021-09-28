@@ -72,7 +72,7 @@ def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
     X = np.zeros(shape)
     # TODO check if this should stay here or not
     # i.e. run tests again for unknown case
-    X = np.reshape( np.linalg.lstsq(sensing_matrix,b, rcond = None)[0] , shape)
+    # X = np.reshape( np.linalg.lstsq(sensing_matrix,b, rcond = None)[0] , shape)
     n_iterations = 100000
     for i in range(n_iterations):
         error = sensing_matrix.dot(X.flatten()) - b.T
@@ -89,3 +89,19 @@ def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
 
         X = U.dot(S).dot(Vh)
     return X
+
+
+# def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
+#     X = np.zeros(shape)
+#     n_iterations = 100000
+#     for i in range(n_iterations):
+#         error = sensing_matrix.dot(X.flatten()) - b.T
+#         Y = X - lr * np.reshape(sensing_matrix.T.dot(error.T), shape)
+#         Y[np.isnan(Y)] = 0
+#         Y[np.isinf(Y)] = 0
+#         # obtain the SVD and crop the singular values
+#         U, s, Vh = np.linalg.svd(Y, full_matrices=True)
+#         S = np.zeros((U.shape[1], Vh.shape[0]))
+#         S[0:rank, 0:rank] = np.diag(s[0:rank])
+#         X = U.dot(S).dot(Vh)
+#     return X
