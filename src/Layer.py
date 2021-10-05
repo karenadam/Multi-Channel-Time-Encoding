@@ -81,60 +81,23 @@ class Layer(object):
         self.weight_matrix = copy.deepcopy(weight_matrix)
 
     def learn_spike_input_and_weight_matrix_from_one_example(self, spike_times: Spike_Times, num_f_s_coefficients: int, period: float):
-        preactivation_f_s_coefficients = self.get_preactivation_f_s_coefficients(spike_times, num_f_s_coefficients, period)
+        preactivation_f_s_coefficients = self.get_preactivation_f_s_coefficients(spike_times, num_f_s_coefficients, period, real_f_s= False)
 
         filter_length = num_f_s_coefficients+1
         a_filter = src.FRISignal.AnnihilatingFilter(preactivation_f_s_coefficients, filter_length)
         filter_poly = np.polynomial.polynomial.Polynomial(a_filter.get_filter_coefficients())
         roots = filter_poly.roots()
         recovered_times = np.sort(np.mod(np.angle(roots) * period / (2 * np.pi), period))
+
+        spike_times_corresponding_coefficients = np.zeros((len(recovered_times), 2*num_f_s_coefficients-1), dtype = 'complex')
+        for n_t in range(len(recovered_times)):
+            fri_signal = src.FRISignal.FRISignal(np.array([recovered_times[n_t]]),  np.array([1]), period)
+            spike_times_corresponding_coefficients[n_t, :] = fri_signal.get_fourier_series(np.arange(-num_f_s_coefficients+1, num_f_s_coefficients,1).T)
+
         return recovered_times
 
     # TODO maybe this can go into/be used directly from decoder code
     def get_preactivation_f_s_coefficients(self, spike_times: Spike_Times, num_f_s_coefficients: int, period: float, real_f_s: bool = True):
-        assert spike_times.n_channels == self.num_outputs
-        if real_f_s:
-            f_s_coefficients = np.zeros((self.num_outputs, 2*num_f_s_coefficients -1 ))
-        else:
-            f_s_coefficients = np.zeros((self.num_outputs, 2*num_f_s_coefficients -1 ), dtype = 'complex')
-        weight_matrix = np.zeros((self.num_outputs, self.num_inputs))
-
-        for n_o in range(self.num_outputs):
-            spiking_output = spike_times.get_spikes_of(n_o)
-            if not real_f_s:
-                measurement_results = -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1]) + 2 * \
-                                      self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                measurement_matrix = np.zeros((len(measurement_results), 2*num_f_s_coefficients-1), dtype = 'complex')
-            else:
-                measurement_results = np.zeros((len(spiking_output)-1 + num_f_s_coefficients -1))
-                measurement_results[:len(spiking_output)-1] = -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1]) + 2 * \
-                                      self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                measurement_matrix = np.zeros((len(measurement_results), 2*num_f_s_coefficients-1))
-
-            # TODO: move this to signal code
-            exponents = (
-                1j * 2 * np.pi / period * np.arange(-num_f_s_coefficients + 1, num_f_s_coefficients, 1)
-            )
-
-            for n_s in range(len(spiking_output) - 1):
-                integrals = Helpers.exp_int(
-                    exponents, [spiking_output[n_s]], [spiking_output[n_s + 1]]
-                )
-                measurement_matrix[n_s, :] = integrals.flatten()
-
-            # if real_f_s:
-            #     for n_c in range(num_f_s_coefficients-1):
-            #         measurement_matrix[len(spiking_output)-1+n_c,n_c] = 1
-            #         measurement_matrix[len(spiking_output)-1+n_c,-1-n_c] = -1
-
-            # f_s_coefficients[n_o, :] = measurement_results.dot((measurement_matrix.T.dot(np.linalg.pinv(measurement_matrix.dot(measurement_matrix.T)))).T)
-            f_s_coefficients[n_o,:] = (np.linalg.lstsq(measurement_matrix, measurement_results, rcond = 1e-12)[0]).T
-
-        return f_s_coefficients
-        # self.weight_matrix = copy.deepcopy(weight_matrix)
-
-    # TODO maybe this can go into/be used directly from decoder code
-    def get_preactivation_f_s_coefficients_edited(self, spike_times: Spike_Times, num_f_s_coefficients: int, period: float, real_f_s: bool = True):
         assert spike_times.n_channels == self.num_outputs
         if real_f_s:
             f_s_coefficients = np.zeros((self.num_outputs, 2*num_f_s_coefficients -1 ))
@@ -171,20 +134,17 @@ class Layer(object):
                 if real_f_s:
                     measurement_matrix[n_s,:] = np.real(integrals).flatten()
 
-            print(num_f_s_coefficients)
-            for n_f_s in range(num_f_s_coefficients-1):
-                measurement_matrix[len(spiking_output)-1+2*n_f_s,n_f_s] = 1
-                measurement_matrix[len(spiking_output)-1+2*n_f_s,2*num_f_s_coefficients-2-n_f_s] = -1
-                measurement_matrix[len(spiking_output)-1+2*n_f_s+1,-1-n_f_s] = 1
-                measurement_matrix[len(spiking_output)-1+2*n_f_s+1,2*num_f_s_coefficients-1+n_f_s] = 1
-            measurement_matrix[-1, 2*num_f_s_coefficients-1+num_f_s_coefficients-1] = 1
-            # if real_f_s:
-            #     for n_c in range(num_f_s_coefficients-1):
-            #         measurement_matrix[len(spiking_output)-1+n_c,n_c] = 1
-            #         measurement_matrix[len(spiking_output)-1+n_c,-1-n_c] = -1
+            if not real_f_s:
+                for n_f_s in range(num_f_s_coefficients-1):
+                    measurement_matrix[len(spiking_output)-1+2*n_f_s,n_f_s] = 1
+                    measurement_matrix[len(spiking_output)-1+2*n_f_s,2*num_f_s_coefficients-2-n_f_s] = -1
+                    measurement_matrix[len(spiking_output)-1+2*n_f_s+1,-1-n_f_s] = 1
+                    measurement_matrix[len(spiking_output)-1+2*n_f_s+1,2*num_f_s_coefficients-1+n_f_s] = 1
+                measurement_matrix[-1, 2*num_f_s_coefficients-1+num_f_s_coefficients-1] = 1
 
-            # f_s_coefficients[n_o, :] = measurement_results.dot((measurement_matrix.T.dot(np.linalg.pinv(measurement_matrix.dot(measurement_matrix.T)))).T)
             f_s_coefficients[n_o,:] = (np.linalg.lstsq(measurement_matrix, measurement_results, rcond = 1e-12)[0]).T
-        return f_s_coefficients[:,:2*num_f_s_coefficients-1]+1j*f_s_coefficients[:,2*num_f_s_coefficients-1:]
-        # self.weight_matrix = copy.deepcopy(weight_matrix)
+        if not real_f_s:
+            return f_s_coefficients[:,:2*num_f_s_coefficients-1]+1j*f_s_coefficients[:,2*num_f_s_coefficients-1:]
+        else:
+            return f_s_coefficients
 

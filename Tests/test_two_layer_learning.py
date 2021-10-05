@@ -53,7 +53,7 @@ class TestLearningWorksOneExample:
 
 
         single_layer = Layer(2,2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients_edited(spikes_mult, 10, period, real_f_s = False)
+        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients(spikes_mult, 10, period, real_f_s = False)
         print(recovered_f_s_coefficients)
         print(np.array(A).dot(np.array(signals.coefficient_values)))
         assert np.allclose(recovered_f_s_coefficients, np.array(A).dot(np.array(signals.coefficient_values)), atol = 1e-2)
@@ -91,7 +91,7 @@ class TestLearningWorksOneExample:
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2,2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients_edited(spikes_mult, n_components, period, real_f_s = False)
+        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients(spikes_mult, n_components, period, real_f_s = False)
 
         assert np.allclose(recovered_f_s_coefficients, np.array(A).dot(np.array(signals.coefficient_values)), atol = 1e-2)
 
@@ -129,16 +129,5 @@ class TestLearningWorksOneExample:
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2,2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients_edited(spikes_mult, n_components, period, real_f_s = False)
-
-        filter_length = K+1
-        a_filter = src.FRISignal.AnnihilatingFilter(recovered_f_s_coefficients, filter_length)
-        filter_poly = np.polynomial.polynomial.Polynomial(a_filter.get_filter_coefficients())
-        roots = filter_poly.roots()
-        recovered_times = np.sort(np.mod(np.angle(roots) * period / (2 * np.pi), period))
-
-        assert np.allclose(np.sort(recovered_times),np.sort(t_k), atol =1e-2)
-
-
-
-
+        spike_times = single_layer.learn_spike_input_and_weight_matrix_from_one_example(spikes_mult, n_components, period)
+        assert np.allclose(np.sort(spike_times),np.sort(t_k), atol =1e-2)
