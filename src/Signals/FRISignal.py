@@ -24,6 +24,8 @@ class FRISignal(Signal.Signal):
 class AnnihilatingFilter(object):
     def __init__(self, f_s_coefficients: np.array, filter_length: int = 1):
         assert len(f_s_coefficients.shape)<=2
+        if f_s_coefficients.shape ==1:
+            f_s_coefficients = np.atleast_2d(f_s_coefficients)
         assert (filter_length % 2 == 1)
         f_s_coefficients = np.atleast_2d(f_s_coefficients)
         assert np.allclose(f_s_coefficients, f_s_coefficients[:,::-1].conj()) # Assumes signal is real and checks that coefficients are conj symmetric
@@ -31,8 +33,12 @@ class AnnihilatingFilter(object):
         if filter_length == 1:
             filter_length = num_taps_per_signal
         self._num_annihilated_signals, self._num_taps = f_s_coefficients.shape[0], filter_length
-        extended_f_s_coefficients = np.zeros((self._num_annihilated_signals, 2*self._num_taps-1), dtype = 'complex')
-        extended_f_s_coefficients[:, self._num_taps - num_taps_per_signal: self._num_taps + num_taps_per_signal - 1] = f_s_coefficients[:,:]
+        if f_s_coefficients.shape[1]>2*self._num_taps-1:
+            extended_f_s_coefficients = f_s_coefficients
+        else:
+            extended_f_s_coefficients = np.zeros((self._num_annihilated_signals, 2*self._num_taps-1), dtype = 'complex')
+            extended_f_s_coefficients[:, self._num_taps - num_taps_per_signal: self._num_taps + num_taps_per_signal - 1] = f_s_coefficients[:,:]
+
         # print(extended_f_s_coefficients)
 #         Want to solve a system s.t. Xa=Y where X and Y are known
         operator = np.zeros(((num_taps_per_signal-1)*self._num_annihilated_signals,self._num_taps-1), dtype = 'complex')

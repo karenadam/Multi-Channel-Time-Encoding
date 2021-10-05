@@ -70,11 +70,8 @@ class TestLearningWorksOneExample:
         t_k_2 = np.random.uniform(low = 0.0, high = period, size = (num_diracs_per_signal))
         t_k = np.concatenate((t_k_1, t_k_2))
 
-        c_k_1 = np.concatenate((0.9*np.ones_like(t_k_1), 0.1*np.ones_like(t_k_2)))
-        c_k_2 = np.concatenate((0.2*np.ones_like(t_k_1), 0.8*np.ones_like(t_k_2)))
-
-        fri_signal_1 = src.FRISignal.FRISignal(t_k,  c_k_1, period)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k, c_k_2, period)
+        fri_signal_1 = src.FRISignal.FRISignal(t_k_1,  np.ones_like(t_k_1), period)
+        fri_signal_2 = src.FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
 
         f_s_components_signal_1 = fri_signal_1.get_fourier_series(np.arange(0, n_components,1).T)
         f_s_components_signal_2 = fri_signal_2.get_fourier_series(np.arange(0, n_components,1).T)
@@ -83,7 +80,7 @@ class TestLearningWorksOneExample:
         signals = Signal.periodicBandlimitedSignals(period)
         signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_1 ))
         signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_2 ))
-        A = np.eye(2)
+        A = [[0.9, 0.1], [0.2, 0.8]]
 
         tem_params = TEMParams(1,1,1, A, int_shift)
 
@@ -96,7 +93,7 @@ class TestLearningWorksOneExample:
         assert np.allclose(recovered_f_s_coefficients, np.array(A).dot(np.array(signals.coefficient_values)), atol = 1e-2)
 
 
-    def test_2_by_2_can_find_annihilating_filter(self):
+    def test_2_by_2_can_find_spike_times(self):
         int_shift = [-1, -0.1]
         period = 3.5
         n_components = 8
@@ -108,11 +105,8 @@ class TestLearningWorksOneExample:
         t_k_2 = np.random.uniform(low = 0.0, high = period, size = (num_diracs_per_signal))
         t_k = np.concatenate((t_k_1, t_k_2))
 
-        c_k_1 = np.concatenate((0.9*np.ones_like(t_k_1), 0.1*np.ones_like(t_k_2)))
-        c_k_2 = np.concatenate((0.2*np.ones_like(t_k_1), 0.8*np.ones_like(t_k_2)))
-
-        fri_signal_1 = src.FRISignal.FRISignal(t_k,  c_k_1, period)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k, c_k_2, period)
+        fri_signal_1 = src.FRISignal.FRISignal(t_k_1,  np.ones_like(t_k_1), period)
+        fri_signal_2 = src.FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
 
         f_s_components_signal_1 = fri_signal_1.get_fourier_series(np.arange(0, n_components,1).T)
         f_s_components_signal_2 = fri_signal_2.get_fourier_series(np.arange(0, n_components,1).T)
@@ -121,7 +115,7 @@ class TestLearningWorksOneExample:
         signals = Signal.periodicBandlimitedSignals(period)
         signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_1 ))
         signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_2 ))
-        A = np.eye(2)
+        A = [[0.9, 0.1], [0.2, 0.8]]
 
         tem_params = TEMParams(1,1,1, A, int_shift)
 
@@ -131,3 +125,53 @@ class TestLearningWorksOneExample:
         single_layer = Layer(2,2)
         spike_times = single_layer.learn_spike_input_and_weight_matrix_from_one_example(spikes_mult, n_components, period)
         assert np.allclose(np.sort(spike_times),np.sort(t_k), atol =1e-2)
+
+    def test_2_by_2_can_find_weights_multi(self):
+            int_shift = [-1, -0.1]
+            period = 3.5
+            n_components = 8
+
+            K = 8
+            num_diracs_per_signal = 4
+            np.random.seed(53)
+
+            spikes_mult = []
+
+            n_examples = 2
+            t_k = []
+            for n_e in range(n_examples):
+
+                t_k_1 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+                t_k_2 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+                t_k.append(np.concatenate((t_k_1, t_k_2)))
+
+                fri_signal_1 = src.FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+                fri_signal_2 = src.FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+
+                f_s_components_signal_1 = fri_signal_1.get_fourier_series(np.arange(0, n_components, 1).T)
+                f_s_components_signal_2 = fri_signal_2.get_fourier_series(np.arange(0, n_components, 1).T)
+
+                signals = Signal.periodicBandlimitedSignals(period)
+                signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_1))
+                signals.add(Signal.periodicBandlimitedSignal(period, n_components, f_s_components_signal_2))
+                A = [[0.9, 0.1], [0.2, 0.8]]
+
+                tem_params = TEMParams(1, 1, 1, A, int_shift)
+
+                spikes_mult.append(Encoder.ContinuousEncoder(tem_params).encode(signals, 50))
+
+
+            single_layer = Layer(2, 2)
+            spike_times = single_layer.learn_spike_input_and_weight_matrix_from_multi_example(spikes_mult, n_components,
+                                                                                            period)
+
+
+            print(single_layer.weight_matrix)
+            for n_e in range(n_examples):
+                print(np.sort(spike_times[n_e].flatten()))
+                print(np.sort(t_k[n_e]))
+                assert np.allclose(np.sort(spike_times[n_e].flatten()), np.sort(t_k[n_e]), atol = 1e-1)
+
+            # Need to find a way to merge two coinciding times together, otherwise comparison is not fair..
+            # and to compare weight matrices
+            # assert np.allclose(np.sort(spike_times), np.sort(t_k), atol=1e-2)

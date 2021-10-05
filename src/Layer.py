@@ -1,4 +1,5 @@
 from src import *
+import sklearn.cluster
 
 class Layer(object):
     def __init__(self, num_inputs, num_outputs, weight_matrix = None):
@@ -94,7 +95,74 @@ class Layer(object):
             fri_signal = src.FRISignal.FRISignal(np.array([recovered_times[n_t]]),  np.array([1]), period)
             spike_times_corresponding_coefficients[n_t, :] = fri_signal.get_fourier_series(np.arange(-num_f_s_coefficients+1, num_f_s_coefficients,1).T)
 
+        coefficients = np.zeros((self.num_outputs, len(recovered_times)))
+        for n_o in range(self.num_outputs):
+            coefficients[n_o,:] = np.real((np.linalg.lstsq(spike_times_corresponding_coefficients.T, preactivation_f_s_coefficients[n_o,:], rcond = 1e-12)[0]).T)
+
+        centroids, labels = sklearn.cluster.k_means(coefficients.T, self.num_inputs)[0:2]
+
+        self.weight_matrix = copy.deepcopy(centroids.T)
+
         return recovered_times
+
+    def learn_spike_input_and_weight_matrix_from_multi_example(self, spike_times: list, num_f_s_coefficients: int,
+                                                             period: float):
+        n_examples = len(spike_times)
+        out_nodes_f_s_coeffs = []
+        dirac_times = []
+        dirac_coeffs = np.zeros((self.num_outputs, 0))
+        for n_e in range(n_examples):
+            preactivation_f_s_coefficients = self.get_preactivation_f_s_coefficients(spike_times[n_e], num_f_s_coefficients,
+                                                                                     period, real_f_s=False)
+            out_nodes_f_s_coeffs.append(preactivation_f_s_coefficients)
+
+            filter_length = num_f_s_coefficients + 1
+            a_filter = src.FRISignal.AnnihilatingFilter(preactivation_f_s_coefficients, filter_length)
+            filter_poly = np.polynomial.polynomial.Polynomial(a_filter.get_filter_coefficients())
+            roots = filter_poly.roots()
+            recovered_times = np.sort(np.mod(np.angle(roots) * period / (2 * np.pi), period))
+            dirac_times.append(recovered_times)
+
+            spike_times_corresponding_coefficients = np.zeros((len(recovered_times), 2 * num_f_s_coefficients - 1),
+                                                              dtype='complex')
+            for n_t in range(len(recovered_times)):
+                fri_signal = src.FRISignal.FRISignal(np.array([recovered_times[n_t]]), np.array([1]), period)
+                spike_times_corresponding_coefficients[n_t, :] = fri_signal.get_fourier_series(
+                    np.arange(-num_f_s_coefficients + 1, num_f_s_coefficients, 1).T)
+
+            coefficients = np.zeros((self.num_outputs, len(recovered_times)))
+            for n_o in range(self.num_outputs):
+                coefficients[n_o, :] = np.real((np.linalg.lstsq(spike_times_corresponding_coefficients.T,
+                                                                preactivation_f_s_coefficients[n_o, :], rcond=1e-12)[0]).T)
+            dirac_coeffs = np.concatenate((dirac_coeffs, coefficients), axis = 1)
+
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs.T, self.num_inputs)[0:2]
+
+        self.weight_matrix = copy.deepcopy(centroids.T)
+
+        # in_nodes_f_s_coeffs = []
+        # filter_length = int(num_f_s_coefficients / self.num_inputs) + 1
+        in_nodes_dirac_times = []
+        #
+        # for n_e in range(n_examples):
+        #     in_nodes_f_s_coeffs.append(np.linalg.pinv(self.weight_matrix).dot(out_nodes_f_s_coeffs[n_e]))
+        #     n_e_dirac_times = np.zeros((self.num_inputs, filter_length-1))
+        #     for n_i in range(self.num_inputs):
+        #         print(in_nodes_f_s_coeffs[n_e][n_i:n_i+1,:].shape)
+        #         a_filter = src.FRISignal.AnnihilatingFilter(in_nodes_f_s_coeffs[n_e][n_i:n_i+1,:], filter_length)
+        #         filter_poly = np.polynomial.polynomial.Polynomial(a_filter.get_filter_coefficients())
+        #         roots = filter_poly.roots()
+        #         n_e_dirac_times[n_i,:] = np.sort(np.mod(np.angle(roots) * period / (2 * np.pi), period))
+        #     in_nodes_dirac_times.append(n_e_dirac_times)
+
+        for n_e in range(n_examples):
+            example_input_diracs =  np.zeros((self.num_inputs, int(num_f_s_coefficients/self.num_inputs)))
+            for n_i in range(self.num_inputs):
+                example_labels = labels[n_e*num_f_s_coefficients:(n_e+1)*num_f_s_coefficients]
+                example_input_diracs[n_i,:] = dirac_times[n_e][np.where(example_labels == n_i)]
+            in_nodes_dirac_times.append(example_input_diracs)
+
+        return in_nodes_dirac_times
 
     # TODO maybe this can go into/be used directly from decoder code
     def get_preactivation_f_s_coefficients(self, spike_times: Spike_Times, num_f_s_coefficients: int, period: float, real_f_s: bool = True):
