@@ -2,11 +2,14 @@ from src import *
 import sklearn.cluster
 
 class Layer(object):
-    def __init__(self, num_inputs, num_outputs, weight_matrix = None):
+    def __init__(self, num_inputs, num_outputs, weight_matrix = None, tem_params = None):
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
         self.weight_matrix = np.zeros((self.num_outputs, self.num_inputs))
-        self.tem_params = TEMParams(kappa = 1, delta = 1, b = 1, mixing_matrix = self.weight_matrix)
+        if tem_params is None:
+            self.tem_params = TEMParams(kappa = 1, delta = 1, b = 1, mixing_matrix = self.weight_matrix)
+        else:
+            self.tem_params = tem_params
         if weight_matrix is not None:
             self.set_weight_matrix(weight_matrix)
 
@@ -58,7 +61,7 @@ class Layer(object):
             measurement_matrix = np.zeros((0,self.num_inputs))
 
             for n_e in range(num_examples):
-                spiking_output = spike_times[n_e].get_spikes_of(n_o)
+                spiking_output = spike_times[n_e].get_spikes_of(n_o).flatten()
                 measurement_results_n_e = -self.tem_params.b[n_o]*(spiking_output[1:]-spiking_output[:-1]) + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
                 measurement_matrix_n_e = np.zeros((len(measurement_results_n_e), self.num_inputs))
                 # TODO: move this to signal code
@@ -156,10 +159,10 @@ class Layer(object):
         #     in_nodes_dirac_times.append(n_e_dirac_times)
 
         for n_e in range(n_examples):
-            example_input_diracs =  np.zeros((self.num_inputs, int(num_f_s_coefficients/self.num_inputs)))
+            example_input_diracs =  []
             for n_i in range(self.num_inputs):
                 example_labels = labels[n_e*num_f_s_coefficients:(n_e+1)*num_f_s_coefficients]
-                example_input_diracs[n_i,:] = dirac_times[n_e][np.where(example_labels == n_i)]
+                example_input_diracs.append(dirac_times[n_e][np.where(example_labels == n_i)])
             in_nodes_dirac_times.append(example_input_diracs)
 
         return in_nodes_dirac_times

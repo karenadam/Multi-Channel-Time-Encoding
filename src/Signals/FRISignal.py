@@ -71,7 +71,7 @@ class AnnihilatingFilter(object):
         return self._filter_coefficients.flatten()
 
     def get_annihilation_operator(self):
-        print(self._num_taps)
+        # print(self._num_taps)
         num_annihilation_constraints = self._num_taps-1
         num_real_signal_constraints = self._num_taps -1
         operator = np.zeros((num_annihilation_constraints + num_real_signal_constraints, self._num_taps*2-1), dtype = 'complex')
