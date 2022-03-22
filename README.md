@@ -17,3 +17,11 @@ Paper: https://ieeexplore.ieee.org/document/9053294.
 Code: https://github.com/karenadam/Mixed-Bandlimited-Time-Encoding
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/karenadam/Mixed-Bandlimited-Time-Encoding/master?filepath=Code%2FMulti-Signal%20Multi-Channel%20Encoding.ipynb)
+
+## Asynchrony Increases Efficiency: Time Encoding of Videos and Low-Rank Signals
+Paper: https://ieeexplore.ieee.org/document/9645321
+
+Code: https://github.com/karenadam/Asynchrony-Increases-Efficiency
+
+## A Time Encoding approach to training Spiking Neural Networks
+Paper: https://arxiv.org/pdf/2110.06735
