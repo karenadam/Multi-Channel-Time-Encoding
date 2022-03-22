@@ -75,7 +75,7 @@ class TestTimeEncoderSingleSignalMultiChannel:
         end_index = int(len(y) * 9 / 10)
         assert (
             np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
-            < 1e-3
+            < 2e-3
         )
 
     # def test_can_reconstruct_standard_encoding_with_recursive_mixing_alg(self):

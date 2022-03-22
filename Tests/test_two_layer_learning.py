@@ -168,9 +168,10 @@ class TestLearningWorksOneExample:
 
             print(single_layer.weight_matrix)
             for n_e in range(n_examples):
-                print(np.sort(spike_times[n_e].flatten()))
+                t_k_hat = np.sort([item for sublist in spike_times[n_e] for item in sublist])
+                print(t_k_hat)
                 print(np.sort(t_k[n_e]))
-                assert np.allclose(np.sort(spike_times[n_e].flatten()), np.sort(t_k[n_e]), atol = 1e-1)
+                assert np.allclose(t_k_hat, np.sort(t_k[n_e]), atol = 1e-1)
 
             # Need to find a way to merge two coinciding times together, otherwise comparison is not fair..
             # and to compare weight matrices

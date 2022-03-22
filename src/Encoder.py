@@ -48,8 +48,6 @@ class DiscreteEncoder(Encoder):
             return spikes
 
     def mix_signals(self, signal):
-        print("bla", self.mixing_matrix.shape)
-        print("bli", signal.shape)
         signal = np.atleast_2d(signal)
         if signal.shape[0] > signal.shape[1]:
             signal = signal.T
