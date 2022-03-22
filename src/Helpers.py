@@ -80,11 +80,12 @@ def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
             print("exited at iteration ", i)
             break
         Y = X - lr * np.reshape(sensing_matrix.T.dot(error.T), shape)
+
         Y[np.isnan(Y)] = 0
         Y[np.isinf(Y)] = 0
         # obtain the SVD and crop the singular values
         U, s, Vh = np.linalg.svd(Y, full_matrices=True)
-        S = np.zeros((U.shape[1], Vh.shape[0]))
+        S = np.zeros(shape)
         S[0:rank, 0:rank] = np.diag(s[0:rank])
 
         X = U.dot(S).dot(Vh)

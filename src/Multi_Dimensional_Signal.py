@@ -151,7 +151,6 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             )
         )
         linear_operator = np.zeros((0, 2 * np.product(self.num_components)))
-
         augmented_integrals = np.zeros((0, 1))
 
         for sample_i in range(num_samples):

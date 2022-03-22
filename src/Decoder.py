@@ -1,6 +1,5 @@
 from src import *
 
-
 class Decoder(object):
     def __init__(self, tem_parameters):
         self.params = tem_parameters
