@@ -22,47 +22,49 @@ class FRISignal(Signal.Signal):
         return f_s_m
 
 class AnnihilatingFilter(object):
-    def __init__(self, f_s_coefficients: np.array, filter_length: int = 1):
+
+    def check_coefficient_shape_and_structure(self, f_s_coefficients: np.array):
         assert len(f_s_coefficients.shape)<=2
-        if f_s_coefficients.shape ==1:
-            f_s_coefficients = np.atleast_2d(f_s_coefficients)
-        assert (filter_length % 2 == 1)
-        f_s_coefficients = np.atleast_2d(f_s_coefficients)
+        if len(f_s_coefficients.shape)==1:
+            f_s_coefficients = np.reshape(f_s_coefficients,(1,f_s_coefficients.shape[0]))
         assert np.allclose(f_s_coefficients, f_s_coefficients[:,::-1].conj()) # Assumes signal is real and checks that coefficients are conj symmetric
-        num_taps_per_signal = int((f_s_coefficients.shape[1]+1)/2)
+        return f_s_coefficients
+
+    def __init__(self, f_s_coefficients: np.array, filter_length: int = 1):
+        f_s_coefficients = self.check_coefficient_shape_and_structure(f_s_coefficients)
+
+
+        num_available_fs_coeffs = int((f_s_coefficients.shape[1] + 1) / 2)
         if filter_length == 1:
-            filter_length = num_taps_per_signal
-        self._num_annihilated_signals, self._num_taps = f_s_coefficients.shape[0], filter_length
-        if f_s_coefficients.shape[1]>2*self._num_taps-1:
+            self._num_taps = num_available_fs_coeffs
+        else:
+            self._num_taps = filter_length
+
+        self._num_annihilated_signals = f_s_coefficients.shape[0]
+
+        if num_available_fs_coeffs >= self._num_taps:
             extended_f_s_coefficients = f_s_coefficients
         else:
+            # TODO this would be the case of joint annihilation.. something is wrong
             extended_f_s_coefficients = np.zeros((self._num_annihilated_signals, 2*self._num_taps-1), dtype = 'complex')
-            extended_f_s_coefficients[:, self._num_taps - num_taps_per_signal: self._num_taps + num_taps_per_signal - 1] = f_s_coefficients[:,:]
+            extended_f_s_coefficients[:, self._num_taps - num_available_fs_coeffs: self._num_taps + num_available_fs_coeffs - 1] = f_s_coefficients[:,:]
 
-        # print(extended_f_s_coefficients)
-#         Want to solve a system s.t. Xa=Y where X and Y are known
-        operator = np.zeros(((num_taps_per_signal-1)*self._num_annihilated_signals,self._num_taps-1), dtype = 'complex')
+        num_rotations = num_available_fs_coeffs - 1
+        num_rotations = self._num_taps-2
+
+        operator = np.zeros(((num_rotations)*self._num_annihilated_signals+1,self._num_taps-1), dtype = 'complex')
         measurements = np.zeros((operator.shape[0],1), dtype = 'complex')
 
         for n_s in range(self._num_annihilated_signals):
-            # for n_t in range(self._num_taps-1):
-            for n_t in range(num_taps_per_signal-1):
-                # print(n_t)
-                operator[n_s*(num_taps_per_signal-1)+n_t,:] = extended_f_s_coefficients[n_s,self._num_taps+n_t-1:n_t:-1]
-                next_operator = f_s_coefficients[n_s,max(n_t+num_taps_per_signal-self._num_taps,0):num_taps_per_signal+n_t:1][::-1]
-                # print(next_operator)
-                # print(extended_f_s_coefficients[n_s,self._num_taps+n_t-1:n_t:-1])
-                # operator[n_s*(num_taps_per_signal-1)+n_t,:len(next_operator)] = next_operator
-
-                # measurements[n_s*(num_taps_per_signal-1)+n_t] = -extended_f_s_coefficients[n_s,self._num_taps+n_t]
-                measurements[n_s*(num_taps_per_signal-1)+n_t] = -f_s_coefficients[n_s,num_taps_per_signal+n_t]
+            for n_t in range(num_rotations):
+                operator[n_s*num_rotations+n_t,:] = extended_f_s_coefficients[n_s,self._num_taps+n_t-1:n_t:-1]
+                measurements[n_s*num_rotations+n_t] = - extended_f_s_coefficients[n_s,self._num_taps+n_t]
 
 
-        # print(extended_f_s_coefficients)
-        # print("OP: ", operator)
-        # print("MEAS: ", measurements)
 
-
+        print(operator)
+        print(np.linalg.matrix_rank(operator))
+        print(measurements)
         self._filter_coefficients = np.ones((self._num_taps,1), dtype = 'complex')
         self._filter_coefficients[1:] = np.linalg.lstsq(operator, measurements, rcond = None)[0]
         self._annihilation_operator = self.get_annihilation_operator()

@@ -24,12 +24,12 @@ class Layer(object):
         assert input.n_signals == self.num_inputs
         assert spike_times.n_channels == self.num_outputs
 
-        weight_matrix = np.zeros((self.num_outputs, self.num_inputs))
+        weight_matrix = np.zeros((self.num_outputs, self.num_inputs),  dtype='complex')
 
         for n_o in range(self.num_outputs):
             spiking_output = spike_times.get_spikes_of(n_o)
             measurement_results = -self.tem_params.b[n_o]*(spiking_output[1:]-spiking_output[:-1]) + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-            measurement_matrix = np.zeros((len(measurement_results), self.num_inputs))
+            measurement_matrix = np.zeros((len(measurement_results), self.num_inputs), dtype='complex')
             # TODO: move this to signal code
 
             exponents = (
@@ -63,7 +63,7 @@ class Layer(object):
             for n_e in range(num_examples):
                 spiking_output = spike_times[n_e].get_spikes_of(n_o).flatten()
                 measurement_results_n_e = -self.tem_params.b[n_o]*(spiking_output[1:]-spiking_output[:-1]) + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                measurement_matrix_n_e = np.zeros((len(measurement_results_n_e), self.num_inputs))
+                measurement_matrix_n_e = np.zeros((len(measurement_results_n_e), self.num_inputs), dtype='complex')
                 # TODO: move this to signal code
 
                 exponents = (
@@ -143,20 +143,7 @@ class Layer(object):
 
         self.weight_matrix = copy.deepcopy(centroids.T)
 
-        # in_nodes_f_s_coeffs = []
-        # filter_length = int(num_f_s_coefficients / self.num_inputs) + 1
         in_nodes_dirac_times = []
-        #
-        # for n_e in range(n_examples):
-        #     in_nodes_f_s_coeffs.append(np.linalg.pinv(self.weight_matrix).dot(out_nodes_f_s_coeffs[n_e]))
-        #     n_e_dirac_times = np.zeros((self.num_inputs, filter_length-1))
-        #     for n_i in range(self.num_inputs):
-        #         print(in_nodes_f_s_coeffs[n_e][n_i:n_i+1,:].shape)
-        #         a_filter = src.FRISignal.AnnihilatingFilter(in_nodes_f_s_coeffs[n_e][n_i:n_i+1,:], filter_length)
-        #         filter_poly = np.polynomial.polynomial.Polynomial(a_filter.get_filter_coefficients())
-        #         roots = filter_poly.roots()
-        #         n_e_dirac_times[n_i,:] = np.sort(np.mod(np.angle(roots) * period / (2 * np.pi), period))
-        #     in_nodes_dirac_times.append(n_e_dirac_times)
 
         for n_e in range(n_examples):
             example_input_diracs =  []
