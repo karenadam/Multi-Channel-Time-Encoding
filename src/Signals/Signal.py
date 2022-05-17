@@ -147,7 +147,7 @@ class bandlimitedSignal(Signal):
             self.sinc_locs.append(T * (n + padding))
             a = np.random.uniform(0, 1)
             self.sinc_amps.append(a)
-        scale = 2 * np.sqrt(np.mean([a ** 2 for a in self.sinc_amps]))
+        scale = 2 * np.sqrt(np.mean([a**2 for a in self.sinc_amps]))
         self.sinc_amps = self.sinc_amps / scale
 
     def sample(self, t):

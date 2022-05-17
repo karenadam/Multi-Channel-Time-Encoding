@@ -37,7 +37,7 @@ def Di2(t, period, component):
 
 def Dii(t, period, n_components):
     component_range = np.arange(1, n_components)
-    integral = 1 / (2 * period) * t ** 2
+    integral = 1 / (2 * period) * t**2
     for n, component in enumerate(component_range):
         integral -= (
             2
@@ -76,7 +76,7 @@ def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
     n_iterations = 100000
     for i in range(n_iterations):
         error = sensing_matrix.dot(X.flatten()) - b.T
-        if i>0 and np.linalg.norm(error) < len(error)*tol:
+        if i > 0 and np.linalg.norm(error) < len(error) * tol:
             print("exited at iteration ", i)
             break
         Y = X - lr * np.reshape(sensing_matrix.T.dot(error.T), shape)

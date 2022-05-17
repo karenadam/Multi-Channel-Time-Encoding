@@ -94,7 +94,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         original = Signal.periodicBandlimitedSignals(period)
         original.add(original1)
         original.add(original2)
-        y = np.zeros((2, len(t)), dtype='complex')
+        y = np.zeros((2, len(t)), dtype="complex")
         y[0, :] = original1.sample(t)
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)

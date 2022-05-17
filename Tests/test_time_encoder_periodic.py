@@ -2,7 +2,8 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
+
 from src import *
 
 # from Signals import (
@@ -64,11 +65,12 @@ class TestTimeEncoderPeriodicWithStructure:
         spikes.add(0, [0.5, 2, 2.5, 3])
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        q, G = Decoder.SSignalMChannelDecoder(tem_params).get_closed_form_matrices(
+        q = Decoder.SSignalMChannelDecoder(tem_params).get_measurement_vector(spikes)
+        G = Decoder.SSignalMChannelDecoder(tem_params).get_measurement_operator(
             spikes, periodic=True, period=period, n_components=n_components
         )
         target_q = [0.5, 1.5, 1.5]
-        assert np.linalg.norm(q - target_q) < 1e-6
+        assert np.allclose(q, target_q)
 
     def test_ss_sc_bl_decoding(self):
         kappa = 1
