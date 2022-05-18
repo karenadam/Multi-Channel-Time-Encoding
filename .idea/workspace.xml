@@ -2,21 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="97dfeaf3-ffd6-4913-8f37-5e0eec53f65e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tests/test_fri_signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_fri_signal.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tests/test_one_layer_learning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_one_layer_learning.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_periodic.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_periodic.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_unknown_mixing.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_unknown_mixing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tests/test_two_layer_learning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_two_layer_learning.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Singular-Value-Thresholding" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Singular-Value-Thresholding" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Decoder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Helpers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Layer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Network.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Signals/FRISignal.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Signals/FRISignal.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Signals/Signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Signals/Signal.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

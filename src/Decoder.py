@@ -9,6 +9,12 @@ class Decoder(object):
     def decode(self, signal):
         raise NotImplementedError
 
+    def check_signal_type(self, periodic, Omega, period, n_components):
+        assert (not periodic and Omega is not None) or (
+            periodic and (period is not None) and (n_components is not None)
+        ), "the type of signal is not consistent with the parameters given"
+
+
     def apply_kernels(
         self,
         G_pl,
@@ -20,36 +26,20 @@ class Decoder(object):
         period=None,
         n_components=None,
     ):
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        self.check_signal_type(periodic, Omega, period, n_components)
 
         def Ki(t):
-            if periodic:
-                return Helpers.Di(t, period, n_components)
-            else:
-                return Helpers.Si(t, Omega)
+            return Helpers.Di(t, period, n_components) if periodic else Helpers.Si(t, Omega)
 
-        x = np.zeros_like(t)
-        start_index = 0
-        for ch in range(self.n_channels):
-
-            kernels = self.get_kernels_from_spikes(Ki, spikes, ch, t)
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-
-            x += (
-                G_pl[start_index : start_index + n_spikes_in_ch - 1].dot(q).dot(kernels)
-            )
-            start_index += n_spikes_in_ch - 1
+        kernels = np.concatenate([self.get_kernels_from_spikes(Ki, spikes, ch, t) for ch in range(self.n_channels)])
+        x = G_pl.dot(q).dot(kernels)
         return x
 
     def get_kernels_from_spikes(self, Ki, spikes, ch, t):
-        spikes_in_ch = spikes.get_spikes_of(ch)
-
-        integral_up_bound = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T
-        integral_low_bound = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T
-        kernels = (Ki(integral_up_bound) - Ki(integral_low_bound)) / (
-            spikes_in_ch[1:, None] - spikes_in_ch[:-1, None]
+        spikes_in_ch = np.atleast_2d(spikes.get_spikes_of(ch)).T
+        t = np.atleast_2d(t)
+        kernels = (Ki(t - spikes_in_ch[1:,:]) - Ki(t - spikes_in_ch[:-1,:])) / (
+            np.diff(spikes_in_ch,axis = 0)
         )
         return kernels
 
@@ -61,76 +51,37 @@ class Decoder(object):
                 return True
         return False
 
-    def get_measurement_vector(self, spikes, t_end=None, t_start=None):
-        if t_end is None or t_start is None:
-            t_start = [
-                spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)
-            ]
-            t_end = [
-                spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)
-            ]
-
-        q = []
-        for ch in range(self.n_channels):
-            q.extend(
-                -self.b[ch] * (np.array(t_end[ch]) - np.array(t_start[ch]))
-                + 2 * self.kappa[ch] * (self.delta[ch])
-            )
+    def get_measurement_vector(self, spikes):
+        q = np.concatenate([-self.b[ch] * (np.diff(spikes.get_spikes_of(ch), axis = 0))
+                + 2 * self.kappa[ch] * (self.delta[ch]) for ch in range(self.n_channels)])
         return q
+
+    def get_measurement_bloc(self, spikes, Kii, ch_i, ch_j):
+        (
+            sum_k_l,
+            sum_k1_l1,
+            sum_k1_l,
+            sum_k_l1,
+            diff_l1_l,
+        ) = self.get_integral_start_and_end_points(spikes.get_spikes_of(ch_i), spikes.get_spikes_of(ch_j))
+
+        return (Kii(sum_k1_l1) - Kii(sum_k_l1) - Kii(sum_k1_l) + Kii(sum_k_l)) / (
+            diff_l1_l
+        )
 
     def get_measurement_operator(
         self, spikes, periodic=False, Omega=None, period=None, n_components=None
     ):
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
-        n_spikes = spikes.get_total_num_spikes()
-
+        self.check_signal_type(periodic, Omega, period, n_components)
         def Kii(t):
-            if periodic:
-                return Helpers.Dii(t, period, n_components)
-            else:
-                return Helpers.Sii(t, Omega)
+            return Helpers.Dii(t, period, n_components) if periodic else Helpers.Sii(t, Omega)
 
-        G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
+        return np.concatenate([np.concatenate([self.get_measurement_bloc(spikes, Kii, ch, ch_j) for ch_j in range(self.n_channels)], axis = 1) for ch in range(self.n_channels)], axis = 0)
 
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
+    def get_integral_start_and_end_points(self, spikes_in_ch_i, spikes_in_ch_j):
+        t_k_matrix = np.transpose(np.matlib.repmat(spikes_in_ch_i, len(spikes_in_ch_j), 1))
+        t_l_matrix = np.matlib.repmat(spikes_in_ch_j,  len(spikes_in_ch_i), 1)
 
-            start_index_j = 0
-            for ch_j in range(self.n_channels):
-                n_spikes_in_ch_j = spikes.get_n_spikes_of(ch_j)
-                spikes_in_ch_j = spikes.get_spikes_of(ch_j)
-
-                (
-                    sum_k_l,
-                    sum_k1_l1,
-                    sum_k1_l,
-                    sum_k_l1,
-                    diff_l1_l,
-                ) = self.get_integral_start_and_end_points(spikes_in_ch, spikes_in_ch_j)
-
-                G[
-                    start_index : start_index + n_spikes_in_ch - 1,
-                    start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                ] = (Kii(sum_k1_l1) - Kii(sum_k_l1) - Kii(sum_k1_l) + Kii(sum_k_l)) / (
-                    diff_l1_l
-                )
-
-                start_index_j += n_spikes_in_ch_j - 1
-
-            start_index += n_spikes_in_ch - 1
-
-        return G
-
-    def get_integral_start_and_end_points(self, spikes_in_ch, spikes_in_ch_j):
-        n_spikes_in_ch_j = len(spikes_in_ch_j)
-        n_spikes_in_ch = len(spikes_in_ch)
-
-        t_k_matrix = np.transpose(np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1))
-        t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
         sum_k_l = t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]
         sum_k1_l1 = t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]
         sum_k1_l = t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
@@ -177,27 +128,17 @@ class SSignalMChannelDecoder(Decoder):
 
 
 class MSignalMChannelDecoder(Decoder):
-    def adjust_weight(self, PCS_sampler, t_start_flattened, t_end_flattened):
-        for n in range(PCS_sampler.shape[0]):
-            PCS_sampler[n, :] = PCS_sampler[n, :] / (
-                t_end_flattened - t_start_flattened
-            )
-        return PCS_sampler
 
-    def get_PCS_sampler_from_spikes(self, spikes, sinc_locs, Omega, t_start, t_end):
+    def get_PCS_sampler_from_spikes(self, spikes, sinc_locs, Omega):
         discontinuities = [
             spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)
         ]
         values = [[0] * (len(discontinuities[ch]) - 1) for ch in range(self.n_channels)]
 
         PCSSignal = Signal.piecewiseConstantSignals(discontinuities, values)
-        PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)
 
-        t_start_flattened = np.array([item for sublist in t_start for item in sublist])
-        t_end_flattened = np.array([item for sublist in t_end for item in sublist])
-        PCS_sampler = self.adjust_weight(
-            PCS_sampler, t_start_flattened, t_end_flattened
-        )
+        PCS_sampler_normalizer = np.concatenate([np.diff(spikes.get_spikes_of(ch)) for ch in range(self.n_channels)])
+        PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)/PCS_sampler_normalizer
 
         return PCS_sampler
 
@@ -224,7 +165,7 @@ class MSignalMChannelDecoder(Decoder):
             self.mixing_matrix
         )
         PCS_sampler = self.get_PCS_sampler_from_spikes(
-            spikes, sinc_locs, Omega, t_start, t_end
+            spikes, sinc_locs, Omega
         )
 
         return (
@@ -256,14 +197,9 @@ class MSignalMChannelDecoder(Decoder):
         )
 
         x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
-        x_param = Signal.bandlimitedSignals(
-            Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps
-        )
+        x_param = Signal.bandlimitedSignals(Omega, sinc_locs, x_sinc_amps)
 
-        if return_as_param:
-            return x_param
-        else:
-            return x_param.sample(t)
+        return x_param if return_as_param else x_param.sample(t)
 
     def get_measurement_operator_periodic(self, spikes, period, n_components):
         n_spikes = spikes.get_total_num_spikes()
@@ -326,10 +262,9 @@ class MSignalMChannelDecoder(Decoder):
         x_param = Signal.periodicBandlimitedSignals(
             period, n_components, recovered_coefficients
         )
-        if return_as_param:
-            return x_param
-        else:
-            return x_param.sample(t)
+
+        return x_param if return_as_param else x_param.sample(t)
+
 
     def get_vid_constraints(self, spikes, TEM_locations):
         n_spike_diffs = spikes.get_total_num_spike_diffs()
