@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.special import sici
 import numpy.matlib
+import scipy.linalg
 import bisect
 import copy
 import time

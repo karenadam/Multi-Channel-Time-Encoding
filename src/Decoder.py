@@ -25,7 +25,6 @@ class Decoder(object):
         period=None,
         n_components=None,
     ):
-
         def Ki(t):
             return (
                 Helpers.Di(t, period, n_components)
@@ -163,63 +162,69 @@ class SSignalMChannelDecoder(Decoder):
 
 class MSignalMChannelDecoder(Decoder):
     def get_PCS_sampler_from_spikes(self, spikes, sinc_locs, Omega):
-        discontinuities = [
-            spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)
-        ]
-        values = [[0] * (len(discontinuities[ch]) - 1) for ch in range(self.n_channels)]
-
-        PCSSignal = Signal.piecewiseConstantSignals(discontinuities, values)
-
+        PCSSignal = Signal.piecewiseConstantSignals(
+            spikes.get_spikes(),
+            values=[
+                [0] * (spikes.get_n_spikes_of(ch) - 1) for ch in range(self.n_channels)
+            ],
+        )
         PCS_sampler_normalizer = np.concatenate(
             [np.diff(spikes.get_spikes_of(ch)) for ch in range(self.n_channels)]
         )
-        PCS_sampler = (
-            PCSSignal.get_sampler_matrix(sinc_locs, Omega) / PCS_sampler_normalizer
+        return PCSSignal.get_sampler_matrix(sinc_locs, Omega) / PCS_sampler_normalizer
+
+    def get_sinc_integral_matrix(self, spikes, sinc_locs, Omega):
+        sinc_locs = np.array(sinc_locs)
+
+        def get_integral_bloc(ch, integral_index):
+            spikes_of_ch = spikes.get_spikes_of(ch)
+            integ_up_limit = spikes_of_ch[integral_index + 1]
+            integ_low_limit = spikes_of_ch[integral_index]
+            return np.atleast_2d(
+                Helpers.Si(integ_up_limit - sinc_locs, Omega)
+                - Helpers.Si(integ_low_limit - sinc_locs, Omega)
+            )
+
+        return scipy.linalg.block_diag(
+            *[
+                np.concatenate(
+                    [
+                        get_integral_bloc(ch, integral_index)
+                        for integral_index in range(spikes.get_n_spikes_of(ch) - 1)
+                    ]
+                )
+                for ch in range(self.n_channels)
+            ]
         )
 
-        return PCS_sampler
+    def get_flattened_mixing_matrix(self, mixing_matrix, num_sincs):
+        mixing_matrix = np.array(mixing_matrix)
 
-    def get_measurement_operators_sincs(self, spikes, sinc_locs, Omega):
-        mixing_matrix_inv = np.linalg.pinv(self.mixing_matrix)
-
-        Ysincs = Signal.bandlimitedSignals(
-            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_channels
-        )
-        Xsincs = Signal.bandlimitedSignals(
-            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_signals
-        )
-
-        t_start = [
-            spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)
-        ]
-        t_end = [spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)]
-
-        integral_computing_matrix = Ysincs.get_integral_matrix(t_start, t_end)
-        flattened_backward_mixing = Ysincs.get_flattened_mixing_matrix(
-            mixing_matrix_inv
-        )
-        flattened_forward_mixing = Xsincs.get_flattened_mixing_matrix(
-            self.mixing_matrix
-        )
-        PCS_sampler = self.get_PCS_sampler_from_spikes(spikes, sinc_locs, Omega)
-
-        return (
-            integral_computing_matrix,
-            flattened_backward_mixing,
-            flattened_forward_mixing,
-            PCS_sampler,
+        return np.concatenate(
+            [
+                np.kron(
+                    mixing_matrix[signal_index, :], np.eye(1, num_sincs, sinc_index)
+                )
+                for signal_index in range(mixing_matrix.shape[0])
+                for sinc_index in range(num_sincs)
+            ]
         )
 
     def decode(self, spikes, t, sinc_locs, Omega, Delta_t, return_as_param=False):
         self.__dict__.update(self.params.__dict__)
 
         q = self.get_measurement_vector(spikes)
-        (
-            integral_computing_matrix,
-            flattened_backward_mixing,
-            flattened_forward_mixing,
-            PCS_sampler,
-        ) = self.get_measurement_operators_sincs(spikes, sinc_locs, Omega)
+
+        integral_computing_matrix = self.get_sinc_integral_matrix(
+            spikes, sinc_locs, Omega
+        )
+        flattened_backward_mixing = self.get_flattened_mixing_matrix(
+            np.linalg.pinv(self.mixing_matrix), len(sinc_locs)
+        )
+        flattened_forward_mixing = self.get_flattened_mixing_matrix(
+            self.mixing_matrix, len(sinc_locs)
+        )
+        PCS_sampler = self.get_PCS_sampler_from_spikes(spikes, sinc_locs, Omega)
 
         operator_inverse = np.linalg.pinv(
             flattened_backward_mixing.dot(PCS_sampler)
@@ -308,14 +313,15 @@ class MSignalMChannelDecoder(Decoder):
                 for sp_d in spike_diff
             ]
             start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 0
-            ] = TEM_locations[ch][0]
+                start_index : start_index + n_spikes_in_ch - 1, 0:2
+            ] = TEM_locations[ch]
             start_coordinates[
                 start_index : start_index + n_spikes_in_ch - 1, 1
             ] = TEM_locations[ch][1]
             start_coordinates[
                 start_index : start_index + n_spikes_in_ch - 1, 2
             ] = spikes_in_ch[:-1]
+            # start_coordinates[start_index : start_index + n_spikes_in_ch - 1,:] = TEM_locations[ch],spikes_in_ch[:-1]
 
             end_coordinates[
                 start_index : start_index + n_spikes_in_ch - 1, 0

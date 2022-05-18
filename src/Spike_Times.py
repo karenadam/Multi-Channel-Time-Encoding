@@ -19,6 +19,9 @@ class spikeTimes(object):
             return spikes_single
         return np.array(self.spikes[channel])
 
+    def get_spikes(self):
+        return self.spikes
+
     def get_total_num_spikes(self):
         total_num = 0
         for ch in range(self.n_channels):

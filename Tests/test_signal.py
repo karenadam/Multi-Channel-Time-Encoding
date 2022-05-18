@@ -47,19 +47,6 @@ class TestBandlimitedSignal:
 
 
 class TestBandlimitedSignals:
-    def test_integral(self):
-        sinc_locs = [1, 2, 3]
-        sinc_amps = [[3, 2, 6], [1, -2, 4]]
-        omega = np.pi
-        signals = Signal.bandlimitedSignals(omega, sinc_locs, sinc_amps)
-        t_start = [[0, 1.5, 3], [0.5, 2]]
-        t_end = [[1.5, 3, 4], [2, 3]]
-        integrals = signals.get_integrals(t_start, t_end)
-
-        signal_1 = signals.get_signal(1)
-        signal_1_integrals = signal_1.get_precise_integral(t_start[1], t_end[1])
-
-        assert np.linalg.norm(integrals[3:] - signal_1_integrals) < 1e-6
 
     def test_mixing(self):
         sinc_locs = [1, 2, 3]

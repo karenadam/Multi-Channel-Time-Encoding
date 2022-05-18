@@ -5,18 +5,6 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
 from src import *
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import TEMParams
-# from Encoder import DiscreteEncoder, ContinuousEncoder
-# from Decoder import MSignalMChannelDecoder
-
-
 class TestTimeEncoderMultiSignalMultiChannel:
     def test_can_reconstruct_standard_encoding_with_2_by_2_mixing_one_shot(self):
         kappa = [1, 1]

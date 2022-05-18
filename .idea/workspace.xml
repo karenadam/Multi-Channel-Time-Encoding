@@ -2,9 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="97dfeaf3-ffd6-4913-8f37-5e0eec53f65e" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/Tests/test_time_encoder_video.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Singular-Value-Thresholding" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Singular-Value-Thresholding" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_signal.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_multi_signal_multi_channel.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_multi_signal_multi_channel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_periodic.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_periodic.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Decoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Signals/Signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Signals/Signal.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Spike_Times.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Spike_Times.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

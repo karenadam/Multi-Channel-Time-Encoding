@@ -170,7 +170,6 @@ class TestTimeEncoderPeriodicWithStructure:
             < 1e-3
         )
 
-
 class TestTimeEncoderBandlimitedPeriodicWithStructure:
     def test_multi_signal_multi_channel_bandlimited_period_one_shot_reconstruction_using_old_rec_alg(
         self
