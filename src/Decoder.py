@@ -295,44 +295,14 @@ class MSignalMChannelDecoder(Decoder):
         return x_param if return_as_param else x_param.sample(t)
 
     def get_vid_constraints(self, spikes, TEM_locations):
-        n_spike_diffs = spikes.get_total_num_spike_diffs()
+        q = self.get_measurement_vector(spikes)
+        TEM_x_locations = np.atleast_2d(np.concatenate([[TEM_locations[ch][0]]*(spikes.get_n_spikes_of(ch)-1) for ch in range(self.n_channels)])).T
+        TEM_y_locations = np.atleast_2d(np.concatenate([[TEM_locations[ch][1]]*(spikes.get_n_spikes_of(ch)-1) for ch in range(self.n_channels)])).T
+        start_times = np.atleast_2d(np.concatenate([spikes.get_spikes_of(ch)[:-1] for ch in range(self.n_channels)])).T
+        end_times = np.atleast_2d(np.concatenate([spikes.get_spikes_of(ch)[1:] for ch in range(self.n_channels)])).T
 
-        q = np.zeros((n_spike_diffs, 1))
-        start_coordinates = np.zeros((n_spike_diffs, 3))
-        end_coordinates = np.zeros((n_spike_diffs, 3))
-
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            if n_spikes_in_ch <= 1:
-                continue
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1, 0] = [
-                -self.b[ch] * (sp_d) + 2 * self.kappa[ch] * (self.delta[ch])
-                for sp_d in spike_diff
-            ]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 0:2
-            ] = TEM_locations[ch]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 1
-            ] = TEM_locations[ch][1]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 2
-            ] = spikes_in_ch[:-1]
-            # start_coordinates[start_index : start_index + n_spikes_in_ch - 1,:] = TEM_locations[ch],spikes_in_ch[:-1]
-
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 0
-            ] = TEM_locations[ch][0]
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 1
-            ] = TEM_locations[ch][1]
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 2
-            ] = spikes_in_ch[1:]
-            start_index += n_spikes_in_ch - 1
+        start_coordinates = np.concatenate([TEM_x_locations, TEM_y_locations, start_times], axis = 1)
+        end_coordinates = np.concatenate([TEM_x_locations, TEM_y_locations, end_times], axis = 1)
         return q, start_coordinates, end_coordinates
 
 
@@ -346,9 +316,7 @@ class UnknownMixingDecoder(Decoder):
         period=None,
         n_components=None,
     ):
-        assert (not periodic and Omega is not None and sinc_locs is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        self.check_signal_type(periodic, Omega, period, n_components)
 
         if periodic:
             n_unknowns_per_ch = n_components * 2 - 1

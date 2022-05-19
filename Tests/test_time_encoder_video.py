@@ -40,7 +40,5 @@ class TestTimeEncoderVideo:
         video = MultiDimPeriodicSignal(opt)
         TEM_locations= [[v, h] for v in range(height) for h in range(width)]
         f_s_coefficients = get_f_s_coeffs_from_time_encoded_video(video, TEM_locations= TEM_locations , num_spikes = 2*length+1)
-        print(f_s_coefficients)
-        print(video.freq_domain_samples)
         assert np.allclose(f_s_coefficients, video.freq_domain_samples.flatten())
         

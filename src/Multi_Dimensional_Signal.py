@@ -76,11 +76,8 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
         factors[:, :, 1:] = 1 / (1j * self.dim_frequencies[-1][1:])
         factors[:, :, 0] = coordinates[-1]
 
-        # print(factors)
-
         for nD in range(self.numDimensions - 1):
             factors = np.repeat(factors, self.num_components[nD], nD)
-        # print("FACTORS", factors)
 
         exponentials = self._get_exponentials_vector(coordinates)
         return np.multiply(exponentials, factors)
@@ -144,16 +141,8 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
         ) == len(integral_start_coordinates)
 
         num_samples = len(integrals)
-        linear_operator = np.zeros(
-            (
-                num_samples + 5 * np.product(self.num_components),
-                2 * np.product(self.num_components),
-            )
-        )
-        linear_operator = np.zeros((0, 2 * np.product(self.num_components)))
-        augmented_integrals = np.zeros((0, 1))
 
-        for sample_i in range(num_samples):
+        def get_linear_operator(sample_i):
             integral_start_weights = self._get_integral_frequency_domain_factors(
                 integral_start_coordinates[sample_i, :]
             ).flatten()
@@ -165,100 +154,68 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                 / np.product(self.periods)
                 * (integral_end_weights - integral_start_weights)
             )
-            linear_operator = np.append(
-                linear_operator,
-                np.atleast_2d(
-                    np.concatenate(
-                        (np.imag(linear_operator_i), np.real(linear_operator_i))
-                    )
-                ),
-                axis=0,
-            )
+            return np.atleast_2d(np.concatenate([np.imag(linear_operator_i), np.real(linear_operator_i)]))
 
-            augmented_integrals = np.append(augmented_integrals, integrals[sample_i])
 
+        linear_operator = np.concatenate([
+            get_linear_operator(sample_i) for sample_i in range(num_samples)],
+        )
+
+        augmented_integrals = integrals
         n = 0
 
         def impose_complex_conjugates(indices_1, indices_2):
-            op_i = np.zeros(self.num_components)
-            op_i[indices_1] += 1
-            op_i[indices_2] += 1
-            nonlocal linear_operator
-            nonlocal n
-            linear_operator = np.append(
-                linear_operator, np.atleast_2d([0] * linear_operator.shape[1]), 0
-            )
-            linear_operator[
-                num_samples + n, : np.product(self.num_components)
-            ] = op_i.flatten()
+            imag_op_i = np.zeros(self.num_components)
+            imag_op_i[indices_1] += 1
+            imag_op_i[indices_2] += 1
 
-            n += 1
-            op_i = np.zeros(self.num_components)
-            op_i[indices_1] += 1
-            op_i[indices_2] += -1
-            linear_operator = np.append(
-                linear_operator, np.atleast_2d([0] * linear_operator.shape[1]), 0
-            )
-            linear_operator[
-                num_samples + n, np.product(self.num_components) :
-            ] = op_i.flatten()
-            n += 1
+            real_op_i = np.zeros(self.num_components)
+            real_op_i[indices_1] += 1
+            real_op_i[indices_2] += -1
+
+            flat_real_op_i = np.atleast_2d(np.concatenate([np.zeros((np.product(self.num_components))), real_op_i.flatten()]))
+            flat_imag_op_i = np.atleast_2d(np.concatenate([imag_op_i.flatten(), np.zeros((np.product(self.num_components)))]))
+
+            return np.concatenate([flat_real_op_i,flat_imag_op_i])
+
 
         def impose_equal(indices_1, indices_2):
             op_i = np.zeros(self.num_components)
             op_i[indices_1] += 1
             op_i[indices_2] -= 1
-            nonlocal linear_operator
-            nonlocal n
-            linear_operator = np.append(
-                linear_operator, np.atleast_2d([0] * linear_operator.shape[1]), 0
-            )
-            linear_operator = np.append(
-                linear_operator, np.atleast_2d([0] * linear_operator.shape[1]), 0
-            )
-            linear_operator[
-                num_samples + n, np.product(self.num_components) :
-            ] = op_i.flatten()
-            n += 1
-            linear_operator[
-                num_samples + n, : np.product(self.num_components)
-            ] = op_i.flatten()
-            n += 1
+
+            flat_real_op_i = np.atleast_2d(np.concatenate([np.zeros((np.product(self.num_components))), op_i.flatten()]))
+            flat_imag_op_i = np.atleast_2d(np.concatenate([op_i.flatten(), np.zeros((np.product(self.num_components)))]))
+            return np.concatenate([flat_real_op_i,flat_imag_op_i])
 
         def impose_real(indices):
             op_i = np.zeros(self.num_components)
             op_i[indices] = 1
-            nonlocal linear_operator
-            nonlocal n
-            linear_operator = np.append(
-                linear_operator, np.atleast_2d([0] * linear_operator.shape[1]), 0
-            )
-            linear_operator[
-                num_samples + n, : np.product(self.num_components)
-            ] = op_i.flatten()
-            n += 1
+            flat_op_i = np.atleast_2d(np.concatenate([ op_i.flatten(),np.zeros((np.product(self.num_components)))]))
+            return flat_op_i
+
 
         for dim_i in range(self.num_components[0]):
             for dim_j in range(self.num_components[1]):
                 for dim_k in range(self.num_components[2]):
-                    impose_complex_conjugates(
-                        (dim_i, dim_j, dim_k), (-dim_i, -dim_j, -dim_k)
+                    linear_operator = np.concatenate([linear_operator, impose_complex_conjugates(
+                        (dim_i, dim_j, dim_k), (-dim_i, -dim_j, -dim_k))]
                     )
 
                     if self.periods[0] % 2 == 0 and dim_i == int(
                         self.num_components[0] / 2
                     ):
-                        impose_equal((dim_i, dim_j, dim_k), (-dim_i, dim_j, dim_k))
+                        linear_operator = np.concatenate([linear_operator, impose_equal((dim_i, dim_j, dim_k), (-dim_i, dim_j, dim_k))])
 
                     if self.periods[1] % 2 == 0 and dim_j == int(
                         self.num_components[1] / 2
                     ):
-                        impose_equal((dim_i, dim_j, dim_k), (dim_i, -dim_j, dim_k))
+                        linear_operator = np.concatenate([linear_operator, impose_equal((dim_i, dim_j, dim_k), (dim_i, -dim_j, dim_k))])
 
                     if self.periods[2] % 2 == 0 and dim_k == int(
                         self.num_components[2] / 2
                     ):
-                        impose_equal((dim_i, dim_j, dim_k), (dim_i, dim_j, -dim_k))
+                        linear_operator = np.concatenate([linear_operator, impose_equal((dim_i, dim_j, dim_k), (dim_i, dim_j, -dim_k))])
 
                     if dim_i == 0 or (
                         self.periods[0] % 2 == 0
@@ -294,9 +251,9 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                             )
                         ):
                             if dim_j > 0:
-                                impose_complex_conjugates(
+                                linear_operator = np.concatenate([linear_operator, impose_complex_conjugates(
                                     (dim_i, dim_j, dim_k), (dim_i, -dim_j, dim_k)
-                                )
+                                )])
 
                     if dim_j == 0 or (
                         self.periods[1] % 2 == 0
@@ -313,9 +270,9 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                             )
                         ):
                             if dim_i > 0:
-                                impose_complex_conjugates(
+                                linear_operator = np.concatenate([linear_operator, impose_complex_conjugates(
                                     (dim_i, dim_j, dim_k), (-dim_i, dim_j, dim_k)
-                                )
+                                )])
 
                     if dim_i == 0 or (
                         self.periods[0] % 2 == 0
@@ -338,9 +295,10 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                                     or dim_k == int(self.num_components[2] / 2) + 1
                                 )
                             ):
-                                impose_real((dim_i, dim_j, dim_k))
+                                linear_operator = np.concatenate([linear_operator,impose_real((dim_i, dim_j, dim_k))])
 
-        augmented_integrals = np.append(augmented_integrals, [0] * n)
+        augmented_integrals = np.zeros((linear_operator.shape[0]), dtype = 'complex')
+        augmented_integrals[:len(integrals)] = integrals
         coefficients_imag_real = np.linalg.lstsq(
             linear_operator, augmented_integrals, rcond=1e-12
         )[0]
