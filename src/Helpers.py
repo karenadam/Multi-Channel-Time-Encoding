@@ -66,6 +66,12 @@ def exp_int(exponent, t_start, t_end, tolerance=1e-18):
             integrals[n, :] = t_end - t_start
     return integrals
 
+def indicator_matrix(dimensions, indices_list):
+    mat = np.zeros(dimensions)
+    for indices in indices_list:
+        mat[indices] +=1
+
+    return mat
 
 def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
 

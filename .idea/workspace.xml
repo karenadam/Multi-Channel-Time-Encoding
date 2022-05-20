@@ -5,6 +5,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_video.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_video.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Decoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Helpers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Multi_Dimensional_Signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Multi_Dimensional_Signal.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

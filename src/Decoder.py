@@ -296,13 +296,39 @@ class MSignalMChannelDecoder(Decoder):
 
     def get_vid_constraints(self, spikes, TEM_locations):
         q = self.get_measurement_vector(spikes)
-        TEM_x_locations = np.atleast_2d(np.concatenate([[TEM_locations[ch][0]]*(spikes.get_n_spikes_of(ch)-1) for ch in range(self.n_channels)])).T
-        TEM_y_locations = np.atleast_2d(np.concatenate([[TEM_locations[ch][1]]*(spikes.get_n_spikes_of(ch)-1) for ch in range(self.n_channels)])).T
-        start_times = np.atleast_2d(np.concatenate([spikes.get_spikes_of(ch)[:-1] for ch in range(self.n_channels)])).T
-        end_times = np.atleast_2d(np.concatenate([spikes.get_spikes_of(ch)[1:] for ch in range(self.n_channels)])).T
+        TEM_x_locations = np.atleast_2d(
+            np.concatenate(
+                [
+                    [TEM_locations[ch][0]] * (spikes.get_n_spikes_of(ch) - 1)
+                    for ch in range(self.n_channels)
+                ]
+            )
+        ).T
+        TEM_y_locations = np.atleast_2d(
+            np.concatenate(
+                [
+                    [TEM_locations[ch][1]] * (spikes.get_n_spikes_of(ch) - 1)
+                    for ch in range(self.n_channels)
+                ]
+            )
+        ).T
+        start_times = np.atleast_2d(
+            np.concatenate(
+                [spikes.get_spikes_of(ch)[:-1] for ch in range(self.n_channels)]
+            )
+        ).T
+        end_times = np.atleast_2d(
+            np.concatenate(
+                [spikes.get_spikes_of(ch)[1:] for ch in range(self.n_channels)]
+            )
+        ).T
 
-        start_coordinates = np.concatenate([TEM_x_locations, TEM_y_locations, start_times], axis = 1)
-        end_coordinates = np.concatenate([TEM_x_locations, TEM_y_locations, end_times], axis = 1)
+        start_coordinates = np.concatenate(
+            [TEM_x_locations, TEM_y_locations, start_times], axis=1
+        )
+        end_coordinates = np.concatenate(
+            [TEM_x_locations, TEM_y_locations, end_times], axis=1
+        )
         return q, start_coordinates, end_coordinates
 
 
