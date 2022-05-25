@@ -76,9 +76,6 @@ class ContinuousEncoder(Encoder):
         ic_integrator=0,
         with_start_time=False,
     ):
-        def get_int(a, b):
-            return signal.get_precise_integral(a, b)
-
         if ic_integrator_default:
             integrator = -self.integrator_init[channel]
         else:
@@ -90,18 +87,14 @@ class ContinuousEncoder(Encoder):
         low_int_bound = 0
         if signal_end_time == 0:
             return []
-        counter = 0
         while z[-1] < signal_end_time:
             si = (
-                get_int(z[-1], current_int_end)
+                signal.get_precise_integral(z[-1], current_int_end)
                 + (current_int_end - z[-1]) * self.b[channel]
             ) / self.kappa[channel]
-            # print(si)
             if len(z) == 1:
                 si = si + (integrator + self.delta[channel])
             if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
-                if len(z) > 1 and z[-1] - z[-2] < tolerance:
-                    z = z[:-1]
                 z.append(current_int_end)
                 low_int_bound = current_int_end
                 upp_int_bound = signal_end_time
@@ -113,7 +106,7 @@ class ContinuousEncoder(Encoder):
                 low_int_bound = current_int_end
                 current_int_end = (current_int_end + upp_int_bound) / 2
             if (
-                get_int(z[-1], signal_end_time)
+                signal.get_precise_integral(z[-1], signal_end_time)
                 + (signal_end_time - z[-1]) * self.b[channel]
             ) / self.kappa[channel] < 2 * self.delta[channel]:
                 break

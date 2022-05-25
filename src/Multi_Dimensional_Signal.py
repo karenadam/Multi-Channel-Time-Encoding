@@ -134,9 +134,13 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
         )
 
     def complex_conjugate_constraints(self, indices_1, indices_2):
-        imag_op_i = Helpers.indicator_matrix(self.num_components, [indices_1, indices_2])
+        imag_op_i = Helpers.indicator_matrix(
+            self.num_components, [indices_1, indices_2]
+        )
 
-        real_op_i = Helpers.indicator_matrix(self.num_components, [indices_1]) - Helpers.indicator_matrix(self.num_components, [indices_2])
+        real_op_i = Helpers.indicator_matrix(
+            self.num_components, [indices_1]
+        ) - Helpers.indicator_matrix(self.num_components, [indices_2])
 
         flat_real_op_i = np.atleast_2d(
             np.concatenate(
@@ -163,7 +167,7 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             ]
         )
 
-    def equality_constraints(self,indices_1, indices_2):
+    def equality_constraints(self, indices_1, indices_2):
         op_i = np.zeros(self.num_components)
         op_i[indices_1] += 1
         op_i[indices_2] -= 1
@@ -217,7 +221,7 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             ops = np.zeros((0, 2 * np.product(self.num_components)))
             for n_period in range(len(self.periods)):
                 if self.periods[n_period] % 2 == 0 and indices[n_period] == int(
-                        self.num_components[n_period] / 2
+                    self.num_components[n_period] / 2
                 ):
                     equal_indices = list(indices)
                     equal_indices[n_period] = -indices[n_period]
@@ -255,8 +259,8 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             index_multiplier = [1] * self.numDimensions
             index_multiplier[component_index] = -1
 
-            if len(indices[component_index])==0:
-                return np.zeros((0,2*np.product(self.num_components)))
+            if len(indices[component_index]) == 0:
+                return np.zeros((0, 2 * np.product(self.num_components)))
             return np.concatenate(
                 [
                     self.complex_conjugate_constraints(
@@ -273,7 +277,9 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                 ]
             )
 
-        return np.concatenate([get_constraint(dim) for dim in range(self.numDimensions)])
+        return np.concatenate(
+            [get_constraint(dim) for dim in range(self.numDimensions)]
+        )
 
     def get_coefficients_from_integrals(
         self, integral_start_coordinates, integral_end_coordinates, integrals
@@ -303,11 +309,14 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
         linear_operator = np.concatenate(
             [
                 np.concatenate(
-                    [get_linear_operator(sample_i) for sample_i in range(num_samples)]),
+                    [get_linear_operator(sample_i) for sample_i in range(num_samples)]
+                ),
                 self.center_point_reflection_complex_conjugate_constraints(),
                 self.get_equality_constraints(),
                 self.impose_conjugation_along_single_components(),
-                self.impose_real_coefficients()])
+                self.impose_real_coefficients(),
+            ]
+        )
 
         augmented_integrals = np.zeros((linear_operator.shape[0]), dtype="complex")
         augmented_integrals[: len(integrals)] = integrals
