@@ -151,7 +151,7 @@ class Layer(object):
         return recovered_times
 
 
-    def get_unmixed_f_s_coefficients(self, recovered_times, num_f_s_coefficients, period):
+    def get_unmixed_f_s_coefficients_of_diracs_at(self, recovered_times, num_f_s_coefficients, period):
         unmixed_f_s_coefficients = np.zeros(
             (len(recovered_times), 2 * num_f_s_coefficients - 1), dtype="complex"
         )
@@ -175,7 +175,7 @@ class Layer(object):
         recovered_times = self.get_input_spike_times_from_F_S_coefficients(
             preactivation_f_s_coefficients, num_f_s_coefficients, period
         )
-        unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients(recovered_times, num_f_s_coefficients, period)
+        unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients_of_diracs_at(recovered_times, num_f_s_coefficients, period)
 
         block_diagonal_measurement_matrix = scipy.linalg.block_diag(
             *[unmixed_f_s_coefficients.T] * self.num_outputs
@@ -207,7 +207,7 @@ class Layer(object):
             )
             dirac_times.append(recovered_times)
 
-            unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients(recovered_times, num_f_s_coefficients, period)
+            unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients_of_diracs_at(recovered_times, num_f_s_coefficients, period)
 
             block_diagonal_measurement_matrix = scipy.linalg.block_diag(
                 *[unmixed_f_s_coefficients.T] * self.num_outputs
@@ -251,41 +251,13 @@ class Layer(object):
     ):
         assert spike_times.n_channels == self.num_outputs
         num_unknowns_to_estimate = 2*num_f_s_coefficients-1 if real_f_s else 2*(2 * num_f_s_coefficients - 1)
-        if real_f_s:
-            f_s_coefficients = np.zeros(
-                (self.num_outputs, 2 * num_f_s_coefficients - 1)
-            )
-        else:
-            f_s_coefficients = np.zeros(
-                (self.num_outputs, 2 * (2 * num_f_s_coefficients - 1))
-            )
+        num_f_s_symmetry_constraints = num_f_s_coefficients - 1 if real_f_s else 2 * (num_f_s_coefficients - 1)+1
+        f_s_coefficients = np.zeros((self.num_outputs, num_unknowns_to_estimate))
+
 
         for n_o in range(self.num_outputs):
             spiking_output = spike_times.get_spikes_of(n_o)
-            if not real_f_s:
-                measurement_results = np.zeros(
-                    (len(spiking_output) - 1 + 2 * (num_f_s_coefficients - 1 + 1))
-                )
-                measurement_results[0 : len(spiking_output) - 1] = (
-                    -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
-                    + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                )
-                measurement_matrix = np.zeros(
-                    (len(measurement_results), 2 * (2 * num_f_s_coefficients - 1))
-                )
-            else:
-                measurement_results = np.zeros(
-                    (len(spiking_output) - 1 + num_f_s_coefficients - 1)
-                )
-                measurement_results[: len(spiking_output) - 1] = (
-                    -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
-                    + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                )
-                measurement_matrix = np.zeros(
-                    (len(measurement_results), 2 * num_f_s_coefficients - 1)
-                )
 
-            # TODO: move this to signal code
             exponents = (
                 1j
                 * 2
@@ -294,46 +266,37 @@ class Layer(object):
                 * np.arange(-num_f_s_coefficients + 1, num_f_s_coefficients, 1)
             )
 
-            for n_s in range(len(spiking_output) - 1):
-                integrals = Helpers.exp_int(
-                    exponents, [spiking_output[n_s]], [spiking_output[n_s + 1]]
+            integrals = Helpers.exp_int(
+                exponents, spiking_output[:-1], spiking_output[1:]
+            )
+
+            if real_f_s:
+                measurement_matrix = np.real(integrals).T
+            else:
+                measurement_matrix = np.concatenate([np.real(
+                    integrals.T
+                ), -np.imag(integrals.T)], axis = 1)
+
+
+            def conjugate_symmetry_constraint(n_f_s):
+                equal_real_constraint =  np.eye(1, num_unknowns_to_estimate, n_f_s) - np.eye(1, num_unknowns_to_estimate, 2 * num_f_s_coefficients - 2 - n_f_s)
+                opposite_imag_constraint = np.eye(1, num_unknowns_to_estimate, -1-n_f_s) - np.eye(1, num_unknowns_to_estimate,  2 * num_f_s_coefficients - 1 + num_f_s_coefficients - 1)
+                return np.concatenate([equal_real_constraint, opposite_imag_constraint])
+
+            conjugate_symmetry_constraints = np.concatenate([conjugate_symmetry_constraint(n_f_s) for n_f_s in range(num_f_s_coefficients-1)])
+            measurement_matrix = np.concatenate([measurement_matrix, conjugate_symmetry_constraints, np.eye(1, num_unknowns_to_estimate, 2 * num_f_s_coefficients - 1 + num_f_s_coefficients - 1)])
+
+
+            measurement_results = np.zeros(measurement_matrix.shape[0]
+            )
+            measurement_results[: len(spiking_output) - 1] = (
+                    -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
+                    + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
                 )
-                if not real_f_s:
-                    measurement_matrix[n_s, : 2 * num_f_s_coefficients - 1] = np.real(
-                        integrals.flatten()
-                    )
-                    measurement_matrix[n_s, 2 * num_f_s_coefficients - 1 :] = -np.imag(
-                        integrals.flatten()
-                    )
-
-                if real_f_s:
-                    measurement_matrix[n_s, :] = np.real(integrals).flatten()
-
-            if not real_f_s:
-                for n_f_s in range(num_f_s_coefficients - 1):
-                    measurement_matrix[len(spiking_output) - 1 + 2 * n_f_s, n_f_s] = 1
-                    measurement_matrix[
-                        len(spiking_output) - 1 + 2 * n_f_s,
-                        2 * num_f_s_coefficients - 2 - n_f_s,
-                    ] = -1
-                    measurement_matrix[
-                        len(spiking_output) - 1 + 2 * n_f_s + 1, -1 - n_f_s
-                    ] = 1
-                    measurement_matrix[
-                        len(spiking_output) - 1 + 2 * n_f_s + 1,
-                        2 * num_f_s_coefficients - 1 + n_f_s,
-                    ] = 1
-                measurement_matrix[
-                    -1, 2 * num_f_s_coefficients - 1 + num_f_s_coefficients - 1
-                ] = 1
 
             f_s_coefficients[n_o, :] = (
                 np.linalg.lstsq(measurement_matrix, measurement_results, rcond=1e-12)[0]
             ).T
-        if not real_f_s:
-            return (
-                f_s_coefficients[:, : 2 * num_f_s_coefficients - 1]
-                + 1j * f_s_coefficients[:, 2 * num_f_s_coefficients - 1 :]
-            )
-        else:
-            return f_s_coefficients
+
+        return f_s_coefficients if real_f_s else (f_s_coefficients[:, : 2 * num_f_s_coefficients - 1]
+                + 1j * f_s_coefficients[:, 2 * num_f_s_coefficients - 1 :])
