@@ -3,7 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="97dfeaf3-ffd6-4913-8f37-5e0eec53f65e" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_one_layer_learning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_one_layer_learning.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_two_layer_learning.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_two_layer_learning.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Layer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Spike_Times.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Spike_Times.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

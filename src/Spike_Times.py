@@ -19,6 +19,9 @@ class spikeTimes(object):
             return spikes_single
         return np.array(self.spikes[channel])
 
+    def __getitem__(self, key):
+        return self.get_spikes_of(key, asSpikeTimesObject=False)
+
     def get_spikes(self):
         return self.spikes
 

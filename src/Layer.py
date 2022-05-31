@@ -21,7 +21,7 @@ class Layer(object):
         self.weight_matrix = copy.deepcopy(weight_matrix)
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
-    def get_measurement_operators_and_results_per_example(
+    def get_ex_measurement_pairs(
         self, input: Signal.SignalCollection, spike_times: Spike_Times
     ):
         exponents = (
@@ -34,7 +34,7 @@ class Layer(object):
 
         measurement_results = [
             (
-                -self.tem_params.b[n_o] * (np.diff(spike_times.get_spikes_of(n_o)))
+                -self.tem_params.b[n_o] * (np.diff(spike_times[n_o]))
                 + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
             )
             for n_o in range(self.num_outputs)
@@ -43,15 +43,14 @@ class Layer(object):
         integrals = [
             Helpers.exp_int(
                 exponents,
-                spike_times.get_spikes_of(n_o)[:-1],
-                spike_times.get_spikes_of(n_o)[1:],
+                s_t[:-1],
+                s_t[1:],
             ).T
-            for n_o in range(self.num_outputs)
+            for s_t in spike_times
         ]
 
         measurement_matrices = [
-            (np.array(input.coefficient_values).dot(integrals[n_o].T)).T
-            for n_o in range(self.num_outputs)
+            (np.array(input.coefficient_values).dot(integ.T)).T for integ in integrals
         ]
 
         return measurement_matrices, measurement_results
@@ -67,7 +66,7 @@ class Layer(object):
             0
         ].reshape((self.num_outputs, self.num_inputs))
 
-    def learn_weight_matrix_from_one_signal(
+    def learn_weight_matrix_from_one_ex(
         self, input: Signal.SignalCollection, spike_times: Spike_Times
     ):
         assert input.n_signals == self.num_inputs
@@ -76,29 +75,22 @@ class Layer(object):
         (
             measurement_matrices,
             measurement_results,
-        ) = self.get_measurement_operators_and_results_per_example(input, spike_times)
+        ) = self.get_ex_measurement_pairs(input, spike_times)
 
         self.weight_matrix = self.get_weight_matrix_from_parallel_measurements(
             measurement_matrices, measurement_results
         )
 
-    def get_measurement_operators_and_results_multi_examples(
-        self, input: list, spike_times: list
-    ):
+    def get_m_ex_measurement_pairs(self, input: list, spike_times: list):
         num_examples = len(input)
         assert num_examples == len(spike_times)
 
-        measurement_matrices = []
-        measurement_results = []
-        for n_e in range(num_examples):
-            (
-                temp_meas_matrix,
-                temp_meas_results,
-            ) = self.get_measurement_operators_and_results_per_example(
-                input[n_e], spike_times[n_e]
-            )
-            measurement_matrices.append(temp_meas_matrix)
-            measurement_results.append(temp_meas_results)
+        ex_measurement_pairs = [
+            self.get_ex_measurement_pairs(input[n_e], spike_times[n_e])
+            for n_e in range(num_examples)
+        ]
+        measurement_matrices = [ex_m_p[0] for ex_m_p in ex_measurement_pairs]
+        measurement_results = [ex_m_p[1] for ex_m_p in ex_measurement_pairs]
 
         measurement_results = [
             np.concatenate(
@@ -114,7 +106,7 @@ class Layer(object):
         ]
         return measurement_matrices, measurement_results
 
-    def learn_weight_matrix_from_multi_signals(self, input: list, spike_times: list):
+    def learn_weight_matrix_from_m_ex(self, input: list, spike_times: list):
         assert (input_e.n_signals == self.num_inputs for input_e in input)
         assert (
             spike_times_e.n_channels == self.num_outputs
@@ -123,9 +115,7 @@ class Layer(object):
         (
             measurement_matrices,
             measurement_results,
-        ) = self.get_measurement_operators_and_results_multi_examples(
-            input, spike_times
-        )
+        ) = self.get_m_ex_measurement_pairs(input, spike_times)
 
         self.weight_matrix = self.get_weight_matrix_from_parallel_measurements(
             measurement_matrices, measurement_results
@@ -133,14 +123,9 @@ class Layer(object):
 
         return
 
-    def get_input_spike_times_from_F_S_coefficients(
-        self, preactivation_f_s_coefficients, num_f_s_coefficients: int, period: float
-    ):
-
-        filter_length = num_f_s_coefficients + 1
-        a_filter = src.FRISignal.AnnihilatingFilter(
-            preactivation_f_s_coefficients, filter_length
-        )
+    def get_dirac_times_from_fsc(self, preactivation_fsc, n_fsc: int, period: float):
+        filter_length = n_fsc + 1
+        a_filter = src.FRISignal.AnnihilatingFilter(preactivation_fsc, filter_length)
         filter_poly = np.polynomial.polynomial.Polynomial(
             a_filter.get_filter_coefficients()
         )
@@ -150,121 +135,94 @@ class Layer(object):
         )
         return recovered_times
 
+    def get_fsc_of_unit_diracs(self, recovered_times, n_fsc, period):
+        def get_fsc_of_unit_dirac(time: float, n_fsc, period):
+            return src.FRISignal.FRISignal(
+                np.array([time]), np.array([1]), period
+            ).get_fourier_series(np.arange(-n_fsc + 1, n_fsc, 1).T)
 
-    def get_unmixed_f_s_coefficients_of_diracs_at(self, recovered_times, num_f_s_coefficients, period):
-        unmixed_f_s_coefficients = np.zeros(
-            (len(recovered_times), 2 * num_f_s_coefficients - 1), dtype="complex"
+        return np.concatenate(
+            [
+                np.atleast_2d(get_fsc_of_unit_dirac(t, n_fsc, period))
+                for t in recovered_times
+            ],
         )
-        for n_t in range(len(recovered_times)):
-            fri_signal = src.FRISignal.FRISignal(
-                np.array([recovered_times[n_t]]), np.array([1]), period
-            )
-            unmixed_f_s_coefficients[n_t, :] = fri_signal.get_fourier_series(
-                np.arange(-num_f_s_coefficients + 1, num_f_s_coefficients, 1).T
-            )
-        return unmixed_f_s_coefficients
 
     def learn_spike_input_and_weight_matrix_from_one_example(
-        self, spike_times: Spike_Times, num_f_s_coefficients: int, period: float
+        self, spike_times: Spike_Times, n_fsc: int, period: float
     ):
-
-        preactivation_f_s_coefficients = self.get_preactivation_f_s_coefficients(
-            spike_times, num_f_s_coefficients, period, real_f_s=False
+        recovered_times, coefficients = self.get_diracs_from_spikes(
+            spike_times, n_fsc, period
         )
-
-        recovered_times = self.get_input_spike_times_from_F_S_coefficients(
-            preactivation_f_s_coefficients, num_f_s_coefficients, period
-        )
-        unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients_of_diracs_at(recovered_times, num_f_s_coefficients, period)
-
-        block_diagonal_measurement_matrix = scipy.linalg.block_diag(
-            *[unmixed_f_s_coefficients.T] * self.num_outputs
-        )
-        coefficients = np.real(
-            np.linalg.lstsq(
-                block_diagonal_measurement_matrix,
-                preactivation_f_s_coefficients.flatten(),
-            )[0].reshape((self.num_outputs, len(recovered_times)))
-        ).T
 
         self.weight_matrix = sklearn.cluster.k_means(coefficients.T, self.num_inputs)[0]
         return recovered_times
 
+    def get_diracs_from_spikes(
+        self, spike_times: Spike_Times, n_fsc: int, period: float
+    ):
+        #  n_fsc: number of fourier series coefficients
+        preactivation_fsc = self.get_preactivation_fsc(
+            spike_times, n_fsc, period, real_f_s=False
+        )
+
+        recovered_times = self.get_dirac_times_from_fsc(
+            preactivation_fsc, n_fsc, period
+        )
+        unmixed_fsc = self.get_fsc_of_unit_diracs(recovered_times, n_fsc, period)
+
+        block_diagonal_measurement_matrix = scipy.linalg.block_diag(
+            *[unmixed_fsc.T] * self.num_outputs
+        )
+        coefficients = np.real(
+            np.linalg.lstsq(
+                block_diagonal_measurement_matrix,
+                preactivation_fsc.flatten(),
+            )[0].reshape((self.num_outputs, len(recovered_times)))
+        ).T
+
+        return recovered_times, coefficients
 
     def learn_spike_input_and_weight_matrix_from_multi_example(
-        self, spike_times: list, num_f_s_coefficients: int, period: float
+        self, spike_times: list, n_fsc: int, period: float
     ):
         n_examples = len(spike_times)
-        dirac_times = []
-        dirac_coeffs = np.zeros((self.num_outputs, 0))
-        for n_e in range(n_examples):
-            preactivation_f_s_coefficients = self.get_preactivation_f_s_coefficients(
-                spike_times[n_e], num_f_s_coefficients, period, real_f_s=False
-            )
-
-            recovered_times = self.get_input_spike_times_from_F_S_coefficients(
-                preactivation_f_s_coefficients, num_f_s_coefficients, period
-            )
-            dirac_times.append(recovered_times)
-
-            unmixed_f_s_coefficients = self.get_unmixed_f_s_coefficients_of_diracs_at(recovered_times, num_f_s_coefficients, period)
-
-            block_diagonal_measurement_matrix = scipy.linalg.block_diag(
-                *[unmixed_f_s_coefficients.T] * self.num_outputs
-            )
-            coefficients = np.real(
-                np.linalg.lstsq(
-                    block_diagonal_measurement_matrix,
-                    preactivation_f_s_coefficients.flatten(),
-                )[0]).reshape((self.num_outputs, len(recovered_times)))
-
-            dirac_coeffs = np.concatenate((dirac_coeffs, coefficients), axis=1)
-
-        centroids, labels = sklearn.cluster.k_means(dirac_coeffs.T, self.num_inputs)[
-            0:2
+        dirac_params = [
+            self.get_diracs_from_spikes(s_t, n_fsc, period) for s_t in spike_times
         ]
-
+        dirac_times = [d_p[0] for d_p in dirac_params]
+        dirac_coeffs = np.concatenate([d_p[1] for d_p in dirac_params], axis=0)
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
         self.weight_matrix = copy.deepcopy(centroids.T)
 
-        in_nodes_dirac_times = []
+        def get_prvs_layer_spikes(example_index, input_neuron_index):
+            example_labels = labels[example_index * n_fsc : (example_index + 1) * n_fsc]
+            return dirac_times[example_index][
+                np.where(example_labels == input_neuron_index)
+            ]
 
-        for n_e in range(n_examples):
-            example_input_diracs = []
-            for n_i in range(self.num_inputs):
-                example_labels = labels[
-                    n_e * num_f_s_coefficients : (n_e + 1) * num_f_s_coefficients
-                ]
-                example_input_diracs.append(
-                    dirac_times[n_e][np.where(example_labels == n_i)]
-                )
-            in_nodes_dirac_times.append(example_input_diracs)
-
-        return in_nodes_dirac_times
+        return [
+            [get_prvs_layer_spikes(n_e, n_i) for n_i in range(self.num_inputs)]
+            for n_e in range(n_examples)
+        ]
 
     # TODO maybe this can go into/be used directly from decoder code
-    def get_preactivation_f_s_coefficients(
+    def get_preactivation_fsc(
         self,
         spike_times: Spike_Times,
-        num_f_s_coefficients: int,
+        n_fsc: int,
         period: float,
         real_f_s: bool = True,
     ):
         assert spike_times.n_channels == self.num_outputs
-        num_unknowns_to_estimate = 2*num_f_s_coefficients-1 if real_f_s else 2*(2 * num_f_s_coefficients - 1)
-        num_f_s_symmetry_constraints = num_f_s_coefficients - 1 if real_f_s else 2 * (num_f_s_coefficients - 1)+1
+        num_unknowns_to_estimate = 2 * n_fsc - 1 if real_f_s else 2 * (2 * n_fsc - 1)
+        num_f_s_symmetry_constraints = n_fsc - 1 if real_f_s else 2 * (n_fsc - 1) + 1
         f_s_coefficients = np.zeros((self.num_outputs, num_unknowns_to_estimate))
 
-
         for n_o in range(self.num_outputs):
-            spiking_output = spike_times.get_spikes_of(n_o)
+            spiking_output = spike_times[n_o]
 
-            exponents = (
-                1j
-                * 2
-                * np.pi
-                / period
-                * np.arange(-num_f_s_coefficients + 1, num_f_s_coefficients, 1)
-            )
+            exponents = 1j * 2 * np.pi / period * np.arange(-n_fsc + 1, n_fsc, 1)
 
             integrals = Helpers.exp_int(
                 exponents, spiking_output[:-1], spiking_output[1:]
@@ -273,30 +231,53 @@ class Layer(object):
             if real_f_s:
                 measurement_matrix = np.real(integrals).T
             else:
-                measurement_matrix = np.concatenate([np.real(
-                    integrals.T
-                ), -np.imag(integrals.T)], axis = 1)
-
+                measurement_matrix = np.concatenate(
+                    [np.real(integrals.T), -np.imag(integrals.T)], axis=1
+                )
 
             def conjugate_symmetry_constraint(n_f_s):
-                equal_real_constraint =  np.eye(1, num_unknowns_to_estimate, n_f_s) - np.eye(1, num_unknowns_to_estimate, 2 * num_f_s_coefficients - 2 - n_f_s)
-                opposite_imag_constraint = np.eye(1, num_unknowns_to_estimate, -1-n_f_s) - np.eye(1, num_unknowns_to_estimate,  2 * num_f_s_coefficients - 1 + num_f_s_coefficients - 1)
+                equal_real_constraint = np.eye(
+                    1, num_unknowns_to_estimate, n_f_s
+                ) - np.eye(1, num_unknowns_to_estimate, 2 * n_fsc - 2 - n_f_s)
+                opposite_imag_constraint = np.eye(
+                    1, num_unknowns_to_estimate, -1 - n_f_s
+                ) - np.eye(
+                    1,
+                    num_unknowns_to_estimate,
+                    2 * n_fsc - 1 + n_fsc - 1,
+                )
                 return np.concatenate([equal_real_constraint, opposite_imag_constraint])
 
-            conjugate_symmetry_constraints = np.concatenate([conjugate_symmetry_constraint(n_f_s) for n_f_s in range(num_f_s_coefficients-1)])
-            measurement_matrix = np.concatenate([measurement_matrix, conjugate_symmetry_constraints, np.eye(1, num_unknowns_to_estimate, 2 * num_f_s_coefficients - 1 + num_f_s_coefficients - 1)])
-
-
-            measurement_results = np.zeros(measurement_matrix.shape[0]
+            conjugate_symmetry_constraints = np.concatenate(
+                [conjugate_symmetry_constraint(n_f_s) for n_f_s in range(n_fsc - 1)]
             )
+            measurement_matrix = np.concatenate(
+                [
+                    measurement_matrix,
+                    conjugate_symmetry_constraints,
+                    np.eye(
+                        1,
+                        num_unknowns_to_estimate,
+                        2 * n_fsc - 1 + n_fsc - 1,
+                    ),
+                ]
+            )
+
+            measurement_results = np.zeros(measurement_matrix.shape[0])
             measurement_results[: len(spiking_output) - 1] = (
-                    -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
-                    + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-                )
+                -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
+                + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
+            )
 
             f_s_coefficients[n_o, :] = (
                 np.linalg.lstsq(measurement_matrix, measurement_results, rcond=1e-12)[0]
             ).T
 
-        return f_s_coefficients if real_f_s else (f_s_coefficients[:, : 2 * num_f_s_coefficients - 1]
-                + 1j * f_s_coefficients[:, 2 * num_f_s_coefficients - 1 :])
+        return (
+            f_s_coefficients
+            if real_f_s
+            else (
+                f_s_coefficients[:, : 2 * n_fsc - 1]
+                + 1j * f_s_coefficients[:, 2 * n_fsc - 1 :]
+            )
+        )

@@ -29,7 +29,7 @@ class TestLearningWorksOneSignal:
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 2)
-        single_layer.learn_weight_matrix_from_one_signal(signals, spikes_mult)
+        single_layer.learn_weight_matrix_from_one_ex(signals, spikes_mult)
 
         assert np.allclose(single_layer.weight_matrix, A)
 
@@ -55,7 +55,7 @@ class TestLearningWorksOneSignal:
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 5)
-        single_layer.learn_weight_matrix_from_one_signal(signals, spikes_mult)
+        single_layer.learn_weight_matrix_from_one_ex(signals, spikes_mult)
 
         assert np.allclose(single_layer.weight_matrix, A)
 
@@ -88,7 +88,7 @@ class TestLearningWorksMultiSignal:
         spikes_mult_2 = Encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
 
         single_layer = Layer(2, 2)
-        single_layer.learn_weight_matrix_from_multi_signals(
+        single_layer.learn_weight_matrix_from_m_ex(
             [signals_1, signals_2], [spikes_mult_1, spikes_mult_2]
         )
 
@@ -123,7 +123,7 @@ class TestLearningWorksMultiSignal:
         spikes_mult_2 = Encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
 
         single_layer = Layer(2, 5)
-        single_layer.learn_weight_matrix_from_multi_signals(
+        single_layer.learn_weight_matrix_from_m_ex(
             [signals_1, signals_2], [spikes_mult_1, spikes_mult_2]
         )
 

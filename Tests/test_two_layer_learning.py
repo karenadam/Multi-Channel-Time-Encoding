@@ -33,7 +33,7 @@ class TestLearningWorksOneExample:
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients(
+        recovered_f_s_coefficients = single_layer.get_preactivation_fsc(
             spikes_mult, 10, period, real_f_s=True
         )
         assert np.allclose(
@@ -77,7 +77,7 @@ class TestLearningWorksOneExample:
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients(
+        recovered_f_s_coefficients = single_layer.get_preactivation_fsc(
             spikes_mult, 10, period, real_f_s=False
         )
         print(recovered_f_s_coefficients)
@@ -129,7 +129,7 @@ class TestLearningWorksOneExample:
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2, 2)
-        recovered_f_s_coefficients = single_layer.get_preactivation_f_s_coefficients(
+        recovered_f_s_coefficients = single_layer.get_preactivation_fsc(
             spikes_mult, n_components, period, real_f_s=False
         )
 
