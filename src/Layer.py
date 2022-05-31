@@ -89,21 +89,21 @@ class Layer(object):
             self.get_ex_measurement_pairs(input[n_e], spike_times[n_e])
             for n_e in range(num_examples)
         ]
-        measurement_matrices = [ex_m_p[0] for ex_m_p in ex_measurement_pairs]
-        measurement_results = [ex_m_p[1] for ex_m_p in ex_measurement_pairs]
 
-        measurement_results = [
-            np.concatenate(
-                [measurement_results[n_e][n_o] for n_e in range(num_examples)]
-            )
-            for n_o in range(self.num_outputs)
-        ]
-        measurement_matrices = [
-            np.concatenate(
-                [measurement_matrices[n_e][n_o] for n_e in range(num_examples)]
-            )
-            for n_o in range(self.num_outputs)
-        ]
+        def group_by_output_neuron(tuple_index: int):
+            return [
+                np.concatenate(
+                    [
+                        ex_measurement_pairs[tuple_index][n_e][n_o]
+                        for n_e in range(num_examples)
+                    ]
+                )
+                for n_o in range(self.num_outputs)
+            ]
+
+        measurement_matrices = group_by_output_neuron(tuple_index=0)
+        measurement_results = group_by_output_neuron(tuple_index=1)
+
         return measurement_matrices, measurement_results
 
     def learn_weight_matrix_from_m_ex(self, input: list, spike_times: list):
@@ -206,7 +206,70 @@ class Layer(object):
             for n_e in range(n_examples)
         ]
 
-    # TODO maybe this can go into/be used directly from decoder code
+    def _get_preactivation_fsc_measurement_constraints(
+        self,
+        spike_times: Spike_Times,
+        n_o: int,
+        n_fsc: int,
+        period: float,
+        real_fsc: bool = True,
+    ):
+        exponents = 1j * 2 * np.pi / period * np.arange(-n_fsc + 1, n_fsc, 1)
+        integrals = Helpers.exp_int(
+            exponents, spike_times[n_o][:-1], spike_times[n_o][1:]
+        )
+
+        if real_fsc:
+            measurement_matrix = np.real(integrals).T
+        else:
+            measurement_matrix = np.concatenate(
+                [np.real(integrals.T), -np.imag(integrals.T)], axis=1
+            )
+
+        measurement_results = (
+            -self.tem_params.b[n_o] * np.diff(spike_times[n_o])
+            + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
+        )
+
+        return measurement_matrix, measurement_results
+
+    def _extend_with_conj_symm_cstr(self, meas_matrix, meas_results, n_fsc):
+
+        conj_symm_cstr = complex_vector_constraints(
+            2 * n_fsc - 1
+        ).get_conjugate_symmetry_constraints()
+        meas_matrix = np.concatenate([meas_matrix, conj_symm_cstr])
+        size_zero_padding = meas_matrix.shape[0] - len(meas_results)
+        meas_results = np.concatenate([meas_results, np.zeros((size_zero_padding))])
+        return meas_matrix, meas_results
+
+    def _get_preactivation_fsc_single_neuron(
+        self,
+        spike_times: Spike_Times,
+        n_o: int,
+        n_fsc: int,
+        period: float,
+        real_fsc: bool = True,
+    ):
+        meas_matrix, meas_results = self._get_preactivation_fsc_measurement_constraints(
+            spike_times, n_o, n_fsc, period, real_fsc
+        )
+
+        if not real_fsc:
+            meas_matrix, meas_results = self._extend_with_conj_symm_cstr(
+                meas_matrix, meas_results, n_fsc
+            )
+
+        f_s_coefficients = np.linalg.lstsq(meas_matrix, meas_results, rcond=1e-12)[0]
+
+        if not real_fsc:
+            f_s_coefficients = (
+                f_s_coefficients[: 2 * n_fsc - 1]
+                + 1j * f_s_coefficients[2 * n_fsc - 1 :]
+            )
+
+        return np.atleast_2d(f_s_coefficients)
+
     def get_preactivation_fsc(
         self,
         spike_times: Spike_Times,
@@ -215,69 +278,14 @@ class Layer(object):
         real_f_s: bool = True,
     ):
         assert spike_times.n_channels == self.num_outputs
-        num_unknowns_to_estimate = 2 * n_fsc - 1 if real_f_s else 2 * (2 * n_fsc - 1)
-        num_f_s_symmetry_constraints = n_fsc - 1 if real_f_s else 2 * (n_fsc - 1) + 1
-        f_s_coefficients = np.zeros((self.num_outputs, num_unknowns_to_estimate))
 
-        for n_o in range(self.num_outputs):
-            spiking_output = spike_times[n_o]
-
-            exponents = 1j * 2 * np.pi / period * np.arange(-n_fsc + 1, n_fsc, 1)
-
-            integrals = Helpers.exp_int(
-                exponents, spiking_output[:-1], spiking_output[1:]
-            )
-
-            if real_f_s:
-                measurement_matrix = np.real(integrals).T
-            else:
-                measurement_matrix = np.concatenate(
-                    [np.real(integrals.T), -np.imag(integrals.T)], axis=1
+        f_s_coefficients = np.concatenate(
+            [
+                self._get_preactivation_fsc_single_neuron(
+                    spike_times, n_o, n_fsc, period, real_f_s
                 )
-
-            def conjugate_symmetry_constraint(n_f_s):
-                equal_real_constraint = np.eye(
-                    1, num_unknowns_to_estimate, n_f_s
-                ) - np.eye(1, num_unknowns_to_estimate, 2 * n_fsc - 2 - n_f_s)
-                opposite_imag_constraint = np.eye(
-                    1, num_unknowns_to_estimate, -1 - n_f_s
-                ) - np.eye(
-                    1,
-                    num_unknowns_to_estimate,
-                    2 * n_fsc - 1 + n_fsc - 1,
-                )
-                return np.concatenate([equal_real_constraint, opposite_imag_constraint])
-
-            conjugate_symmetry_constraints = np.concatenate(
-                [conjugate_symmetry_constraint(n_f_s) for n_f_s in range(n_fsc - 1)]
-            )
-            measurement_matrix = np.concatenate(
-                [
-                    measurement_matrix,
-                    conjugate_symmetry_constraints,
-                    np.eye(
-                        1,
-                        num_unknowns_to_estimate,
-                        2 * n_fsc - 1 + n_fsc - 1,
-                    ),
-                ]
-            )
-
-            measurement_results = np.zeros(measurement_matrix.shape[0])
-            measurement_results[: len(spiking_output) - 1] = (
-                -self.tem_params.b[n_o] * (spiking_output[1:] - spiking_output[:-1])
-                + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-            )
-
-            f_s_coefficients[n_o, :] = (
-                np.linalg.lstsq(measurement_matrix, measurement_results, rcond=1e-12)[0]
-            ).T
-
-        return (
-            f_s_coefficients
-            if real_f_s
-            else (
-                f_s_coefficients[:, : 2 * n_fsc - 1]
-                + 1j * f_s_coefficients[:, 2 * n_fsc - 1 :]
-            )
+                for n_o in range(self.num_outputs)
+            ]
         )
+
+        return f_s_coefficients

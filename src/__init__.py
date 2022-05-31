@@ -13,4 +13,5 @@ from .Spike_Times import *
 import src.Encoder
 import src.Decoder
 from .Multi_Dimensional_Signal import *
+from .Complex_Vector_Constraints import complex_vector_constraints
 from .Layer import *
