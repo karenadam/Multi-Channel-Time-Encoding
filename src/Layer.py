@@ -33,10 +33,10 @@ class Layer(object):
         )
 
         measurement_results = [
-            (
+            np.atleast_2d(
                 -self.tem_params.b[n_o] * (np.diff(spike_times[n_o]))
                 + 2 * self.tem_params.kappa[n_o] * self.tem_params.delta[n_o]
-            )
+            ).T
             for n_o in range(self.num_outputs)
         ]
 
@@ -45,12 +45,12 @@ class Layer(object):
                 exponents,
                 s_t[:-1],
                 s_t[1:],
-            ).T
+            )
             for s_t in spike_times
         ]
 
         measurement_matrices = [
-            (np.array(input.coefficient_values).dot(integ.T)).T for integ in integrals
+            (np.array(input.coefficient_values).dot(integ)).T for integ in integrals
         ]
 
         return measurement_matrices, measurement_results
@@ -94,15 +94,16 @@ class Layer(object):
             return [
                 np.concatenate(
                     [
-                        ex_measurement_pairs[tuple_index][n_e][n_o]
+                        ex_measurement_pairs[n_e][tuple_index][n_o]
                         for n_e in range(num_examples)
-                    ]
+                    ],
                 )
                 for n_o in range(self.num_outputs)
             ]
 
-        measurement_matrices = group_by_output_neuron(tuple_index=0)
         measurement_results = group_by_output_neuron(tuple_index=1)
+        measurement_matrices = group_by_output_neuron(tuple_index=0)
+
 
         return measurement_matrices, measurement_results
 
