@@ -104,7 +104,6 @@ class Layer(object):
         measurement_results = group_by_output_neuron(tuple_index=1)
         measurement_matrices = group_by_output_neuron(tuple_index=0)
 
-
         return measurement_matrices, measurement_results
 
     def learn_weight_matrix_from_m_ex(self, input: list, spike_times: list):
