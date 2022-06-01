@@ -2,11 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="97dfeaf3-ffd6-4913-8f37-5e0eec53f65e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Tests/test_network.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Singular-Value-Thresholding" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Layer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_network.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_single_signal_multi_channel.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_single_signal_multi_channel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tests/test_time_encoder_single_signal_single_channel.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tests/test_time_encoder_single_signal_single_channel.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Network.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Network.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Spike_Times.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Spike_Times.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/TEMParams.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/TEMParams.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
     </list>
@@ -45,6 +46,7 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="TODO_SCOPE" value="All Places" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">

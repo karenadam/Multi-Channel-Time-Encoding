@@ -8,12 +8,18 @@ class TEMParams(object):
 
     Attributes
     ----------
-    kappa: float
-        integrator constant
-    delta: float
-        firing threshold
-    b: float
-        bias added to input signal
+    n_signals: int
+        number of signals the time encoding machines encode
+    n_channels: int
+        number of channels used for the encoding. this can be different
+        from the number of signals, in which case there is some mixing
+        of the signals before they are fed into the channels
+    kappa: list
+        list of floats that represent integrator constants of each TEM
+    delta: list
+        list of floats that represent firing threshold of each TEM
+    b: list of floats
+        list of floats that represent bias added to input signal for each TEM
     mixing_matrix: np.ndarray
         matrix A where y = Ax where x is the input to the system and x
         is the vector of inputs to the time encoding machines
@@ -21,6 +27,7 @@ class TEMParams(object):
         list of float values that specify the value of the integrator
         at start of the integration
     """
+
     def __init__(
         self,
         kappa,
@@ -29,6 +36,25 @@ class TEMParams(object):
         mixing_matrix,
         integrator_init=[],
     ):
+        """
+        Makes sure all parameters have the right shapes before initializing
+
+        Parameters
+        ----------
+        kappa: float
+            integrator constant
+        delta: float
+            firing threshold
+        b: float
+            bias added to input signal
+        mixing_matrix: np.ndarray
+            matrix A where y = Ax where x is the input to the system and x
+            is the vector of inputs to the time encoding machines
+        integrator_init: list
+            list of float values that specify the value of the integrator
+            at start of the integration
+        """
+
         self.mixing_matrix = np.atleast_2d(np.array(mixing_matrix))
         self.n_signals = self.mixing_matrix.shape[1]
         self.n_channels = self.mixing_matrix.shape[0]
@@ -40,13 +66,49 @@ class TEMParams(object):
             self.integrator_init = [-self.delta[l] for l in range(self.n_channels)]
         self.b = self.check_dimensions(b)
 
+    def __repr__(self):
+        return (
+            "TEMParams with "
+            + str(self.n_signals)
+            + " signals, "
+            + str(self.n_channels)
+            + " channels , kappa = "
+            + str(self.kappa)
+            + ", delta = "
+            + str(self.delta)
+            + " b = "
+            + str(self.b)
+            + ", mixing_matrix = "
+            + str(self.mixing_matrix)
+            + ", integrator_init = "
+            + str(self.integrator_init)
+        )
+
     def check_dimensions(self, parameter):
-        if not isinstance(parameter, (list)):
+        """
+        Verifies that parameter has as many entries at the number
+        of channels
+
+        Parameters
+        ----------
+        parameter: list or float
+            either a float or a list of floats (for a given parameter
+            type kappa, delta, b or integrator_init), each of which corresponds
+            to one of the TEM channels
+
+        Raises
+        ------
+        ValueError
+            If the parameter given is a list with a length that is inconsistent
+            with the number of channels
+        """
+
+        if not isinstance(parameter, list):
             parameter = [parameter] * self.n_channels
         elif len(parameter) == 1:
             parameter = parameter * self.n_channels
-        else:
-            assert (
-                len(parameter) == self.n_channels
-            ), "There should be as many values set for the TEM parameters as there are channels"
+        elif len(parameter) != self.n_channels:
+            raise ValueError(
+                "There should be as many values set for the TEM parameters as there are channels"
+            )
         return [float(p) for p in parameter]

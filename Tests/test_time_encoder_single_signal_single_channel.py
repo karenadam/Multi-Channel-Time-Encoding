@@ -5,18 +5,6 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import *
-# from Encoder import *
-# from Decoder import *
-
-
 class TestTimeEncoderSingleSignalSingleChannel:
     def test_time_encoder_creator(self):
         TEM = TEMParams(kappa=1, delta=1, b=1, mixing_matrix=[[1]])

@@ -5,19 +5,47 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
 from src import *
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import *
-# from Encoder import *
-# from Decoder import *
-
 
 class TestTimeEncoderSingleSignalMultiChannel:
+    def test_tem_params_repr(self):
+        kappa = [4, 3.2, 2.8, 3]
+        delta = [0.8, 1.2, 0.6, 1]
+        b = 1
+        int_shift = max(delta) / 2
+
+        omega = np.pi
+        delta_t = 1e-4
+        t = np.arange(0, 20, delta_t)
+        np.random.seed(10)
+        original = Signal.bandlimitedSignal(omega)
+        original.random(t)
+        y = original.sample(t)
+        b = np.max(np.abs(y)) + 1
+
+        tem_mult = TEMParams(
+            kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=[int_shift]
+        )
+        spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
+            original, signal_end_time=20, delta_t=delta_t
+        )
+        print(tem_mult)
+        print(spikes_mult)
+        print(spikes_mult.__repr__())
+
+    def test_tem_params_throws_error_when_mismatch_in_params(self):
+        kappa = [4, 3.2, 2.8, 3]
+        delta = [0.8, 1.2, 0.6]
+        b = 1
+        int_shift = max(delta) / 2
+
+        try:
+            tem_mult = TEMParams(
+                kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=[int_shift]
+            )
+        except:
+            return
+        assert False
+
     def test_can_reconstruct_standard_encoding_ex1(self):
         kappa = [4, 3.2, 2.8, 3]
         delta = [0.8, 1.2, 0.6, 1]

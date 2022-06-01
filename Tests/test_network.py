@@ -9,15 +9,18 @@ from src import *
 class TestCanCreateNetwork:
     def test_can_create_empty_network(self):
         net = Network([])
+        print(net)
 
     def test_can_create_single_layer_network(self):
         layer = Layer(num_inputs = 3, num_outputs = 4)
         net = Network([layer])
+        print(net)
 
     def test_can_create_two_layer_network(self):
         layer_1 = Layer(num_inputs = 3, num_outputs = 4)
         layer_2 = Layer(num_inputs = 4, num_outputs = 2)
         net = Network([layer_1, layer_2])
+        print(net)
 
     def test_throws_error_if_wrong_layer_type(self):
         try:
