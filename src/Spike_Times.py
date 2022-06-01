@@ -215,7 +215,7 @@ class spikeTimes(object):
 
         corrupted_spikeTimes = spikeTimes(self.n_channels)
         for ch in range(self.n_channels):
-            spike_dif = self.get_spikes_of(ch)[1:] - self.get_spikes_of(ch)[:-1]
+            spike_dif = np.diff(self.get_spikes_of(ch))
             spike_dif_power = np.linalg.norm(spike_dif) / len(spike_dif)
             noise_power = snr * spike_dif_power
             added_noise = np.random.normal(
