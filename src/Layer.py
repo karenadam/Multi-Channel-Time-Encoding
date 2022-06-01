@@ -3,7 +3,37 @@ import sklearn.cluster
 
 
 class Layer(object):
+    """
+    Class which implements a layer of a spiking neural network
+
+    Attributes
+    ----------
+    num_inputs: int
+        number of inputs to the layer
+    num_outputs: int
+        number of outputs of the layer
+    weight_matrix: np.ndarray
+        2D array of floats, weight matrix that transforms input to layer
+        to the input to the nodes
+    tem_params: TEMParams
+        contains the parameters of the TEMs that are the nodes of the layer
+    """
+
     def __init__(self, num_inputs, num_outputs, weight_matrix=None, tem_params=None):
+        """
+        Parameters
+        ----------
+        num_inputs: int
+            number of inputs to the layer
+        num_outputs: int
+            number of outputs of the layer
+        weight_matrix: np.ndarray
+            2D array of floats, weight matrix that transforms input to layer
+            to the input to the nodes
+        tem_params: TEMParams
+            contains the parameters of the TEMs that are the nodes of the layer
+        """
+
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
         self.weight_matrix = np.zeros((self.num_outputs, self.num_inputs))
@@ -16,8 +46,26 @@ class Layer(object):
             self.set_weight_matrix(weight_matrix)
 
     def set_weight_matrix(self, weight_matrix):
-        assert len(weight_matrix.shape) == 2
-        assert weight_matrix.shape == self.num_outputs, self.num_inputs
+        """
+        Parameters
+        ----------
+        weight_matrix: np.ndarray
+            2D array of floats, weight matrix that transforms input to layer
+            to the input to the nodes
+
+        Raises
+        ------
+        ValueError
+            If the weight matrix does not have the right shape
+        """
+
+        if len(weight_matrix.shape) != 2:
+            raise ValueError("The weight matrix should have two dimensions")
+        if weight_matrix.shape[0]!=self.num_outputs:
+            raise ValueError("The weight matrix should have " + str(self.num_outputs) +" outputs but has " + str(weight_matrix.shape[0]) + " outputs instead")
+
+        if weight_matrix.shape[1]!=self.num_inputs:
+            raise ValueError("The weight matrix should have " + str(self.num_inputs) +" outputs but has " + str(weight_matrix.shape[1]) + " inputs instead")
         self.weight_matrix = copy.deepcopy(weight_matrix)
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 

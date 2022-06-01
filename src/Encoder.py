@@ -127,18 +127,11 @@ class ContinuousEncoder(Encoder):
     ):
 
         self.__dict__.update(self.params.__dict__)
-        assert isinstance(x_param, Signal.bandlimitedSignals) or isinstance(
-            x_param, Signal.periodicBandlimitedSignals
-        )
-        n_signals = x_param.n_signals
 
         y_param = x_param.get_mixed_signals(self.mixing_matrix)
-
         spikes = spikeTimes(self.n_channels)
         for ch in range(self.n_channels):
-            # signal = bandlimitedSignal(Omega, x_sinc_locs, y_sinc_amps[ch])
             signal = y_param.get_signal(ch)
-
             spikes_of_ch = self.encode_single_channel_precise(
                 signal,
                 signal_end_time,

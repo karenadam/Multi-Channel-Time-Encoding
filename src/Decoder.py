@@ -10,9 +10,10 @@ class Decoder(object):
         raise NotImplementedError
 
     def check_signal_type(self, periodic, Omega, period, n_components):
-        assert (not periodic and Omega is not None) or (
+        if not((not periodic and Omega is not None) or (
             periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        )):
+            raise ValueError("the type of signal is not consistent with the parameters given")
 
     def apply_kernels(
         self,
@@ -275,9 +276,10 @@ class MSignalMChannelDecoder(Decoder):
         return_as_param=False,
     ):
 
-        assert (
+        if not(
             periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        ):
+            raise ValueError("the type of signal is not consistent with the parameters given")
 
         measurement_vector = self.get_measurement_vector(spikes)
         measurement_operator = self.get_measurement_operator_periodic(
@@ -409,9 +411,10 @@ class UnknownMixingDecoder(Decoder):
     ):
         self.__dict__.update(self.params.__dict__)
 
-        assert (not periodic and Omega is not None and sinc_locs is not None) or (
+        if not((not periodic and Omega is not None and sinc_locs is not None) or (
             periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        )):
+            raise ValueError("the type of signal is not consistent with the parameters given")
 
         shape = (
             self.n_channels,
@@ -428,9 +431,7 @@ class UnknownMixingDecoder(Decoder):
         )
 
         q = np.atleast_2d(q.T)
-
         G_inv = np.linalg.pinv(G)
-        G_inv = G.T.dot(np.linalg.pinv(G.dot(G.T)))
         C_y = Helpers.singular_value_projection_w_matrix(
             shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-3, lr=0.5
         )
