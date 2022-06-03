@@ -25,3 +25,5 @@ Code: https://github.com/karenadam/Asynchrony-Increases-Efficiency
 
 ## A Time Encoding approach to training Spiking Neural Networks
 Paper: https://arxiv.org/pdf/2110.06735
+
+Code: https://github.com/karenadam/Spiking-Neural-Networks-Meet-Time-Encoding
