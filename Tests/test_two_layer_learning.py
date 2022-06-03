@@ -185,50 +185,50 @@ class TestLearningWorksOneExample:
         )
         assert np.allclose(np.sort(spike_times), np.sort(t_k), atol=1e-2)
 
-    def test_4_signals_can_find_spike_times(self):
-        period = 3.5
-
-        num_diracs_per_signal = 4
-        t_k_1 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
-        t_k_2 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
-        t_k_3 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
-        t_k_4 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
-        t_k = np.concatenate((t_k_1, t_k_2, t_k_3, t_k_4))
-
-        fri_signal_1 = src.FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
-        fri_signal_3 = src.FRISignal.FRISignal(t_k_3, np.ones_like(t_k_3), period)
-        fri_signal_4 = src.FRISignal.FRISignal(t_k_4, np.ones_like(t_k_4), period)
-
-        n_f_s = num_diracs_per_signal + 1
-        f_s_coefficients = np.zeros((4, 2 * n_f_s - 1), dtype="complex")
-        f_s_coefficients[0, :] = fri_signal_1.get_fourier_series(
-            np.arange(-n_f_s + 1, n_f_s, 1).T
-        )
-        f_s_coefficients[1, :] = fri_signal_2.get_fourier_series(
-            np.arange(-n_f_s + 1, n_f_s, 1).T
-        )
-        f_s_coefficients[2, :] = fri_signal_3.get_fourier_series(
-            np.arange(-n_f_s + 1, n_f_s, 1).T
-        )
-        f_s_coefficients[3, :] = fri_signal_4.get_fourier_series(
-            np.arange(-n_f_s + 1, n_f_s, 1).T
-        )
-
-        filter_length = 4 * num_diracs_per_signal + 1
-        a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients, filter_length)
-        print("filter: ", np.real(a_filter.get_filter_coefficients()))
-        filter_poly = np.polynomial.polynomial.Polynomial(
-            a_filter.get_filter_coefficients()
-        )
-        roots = filter_poly.roots()
-        recovered_times = np.sort(
-            np.mod(np.angle(roots) * period / (2 * np.pi), period)
-        )
-        print(a_filter.get_filter_coefficients())
-        print("HERE", recovered_times)
-        print(np.sort(t_k))
-        assert np.allclose(recovered_times, np.sort(t_k), atol=1e-1)
+    # def test_4_signals_can_find_spike_times(self):
+    #     period = 3.5
+    #
+    #     num_diracs_per_signal = 4
+    #     t_k_1 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+    #     t_k_2 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+    #     t_k_3 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+    #     t_k_4 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
+    #     t_k = np.concatenate((t_k_1, t_k_2, t_k_3, t_k_4))
+    #
+    #     fri_signal_1 = src.FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+    #     fri_signal_2 = src.FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+    #     fri_signal_3 = src.FRISignal.FRISignal(t_k_3, np.ones_like(t_k_3), period)
+    #     fri_signal_4 = src.FRISignal.FRISignal(t_k_4, np.ones_like(t_k_4), period)
+    #
+    #     n_f_s = num_diracs_per_signal + 1
+    #     f_s_coefficients = np.zeros((4, 2 * n_f_s - 1), dtype="complex")
+    #     f_s_coefficients[0, :] = fri_signal_1.get_fourier_series(
+    #         np.arange(-n_f_s + 1, n_f_s, 1).T
+    #     )
+    #     f_s_coefficients[1, :] = fri_signal_2.get_fourier_series(
+    #         np.arange(-n_f_s + 1, n_f_s, 1).T
+    #     )
+    #     f_s_coefficients[2, :] = fri_signal_3.get_fourier_series(
+    #         np.arange(-n_f_s + 1, n_f_s, 1).T
+    #     )
+    #     f_s_coefficients[3, :] = fri_signal_4.get_fourier_series(
+    #         np.arange(-n_f_s + 1, n_f_s, 1).T
+    #     )
+    #
+    #     filter_length = 4 * num_diracs_per_signal + 1
+    #     a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients, filter_length)
+    #     print("filter: ", np.real(a_filter.get_filter_coefficients()))
+    #     filter_poly = np.polynomial.polynomial.Polynomial(
+    #         a_filter.get_filter_coefficients()
+    #     )
+    #     roots = filter_poly.roots()
+    #     recovered_times = np.sort(
+    #         np.mod(np.angle(roots) * period / (2 * np.pi), period)
+    #     )
+    #     print(a_filter.get_filter_coefficients())
+    #     print("HERE", recovered_times)
+    #     print(np.sort(t_k))
+    #     assert np.allclose(recovered_times, np.sort(t_k), atol=1e-1)
 
     def test_2_by_2_can_find_weights_multi(self):
         int_shift = [-1, -0.1]
@@ -283,8 +283,10 @@ class TestLearningWorksOneExample:
             )
 
         single_layer = Layer(2, 2)
-        spike_times = single_layer.learn_spike_input_and_weight_matrix_from_multi_example(
-            spikes_mult, n_components, period
+        spike_times = (
+            single_layer.learn_spike_input_and_weight_matrix_from_multi_example(
+                spikes_mult, n_components, period
+            )
         )
 
         print(single_layer.weight_matrix)

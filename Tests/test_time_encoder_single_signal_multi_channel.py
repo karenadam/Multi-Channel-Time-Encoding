@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
 
@@ -66,13 +66,13 @@ class TestTimeEncoderSingleSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
             original, signal_end_time=20, delta_t=delta_t
         )
-        rec_mult = Decoder.SSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, periodic=False, Omega=omega
-        )
+        rec_mult = Decoder.SSignalMChannelDecoder(
+            tem_mult, periodic=False, Omega=omega
+        ).decode(spikes_mult, t)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
         assert (
-            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
 
@@ -96,13 +96,17 @@ class TestTimeEncoderSingleSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
             original, signal_end_time=20, delta_t=delta_t
         )
-        rec_mult = Decoder.SSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, periodic=False, Omega=omega
+        print(spikes_mult)
+        rec_mult = Decoder.SSignalMChannelDecoder(
+            tem_mult, periodic=False, Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
         assert (
-            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 2e-3
         )
 
@@ -155,8 +159,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -190,8 +197,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -226,8 +236,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)

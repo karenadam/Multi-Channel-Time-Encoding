@@ -1,5 +1,6 @@
 from src import *
 
+
 def sinc(t, Omega):
     """
     sinc_Omega(t) = sin(Omega t)/(pi t)
@@ -19,7 +20,8 @@ def sinc(t, Omega):
 
     return np.sinc(Omega / np.pi * t) * Omega / np.pi
 
-def Si(t, Omega):
+
+def sinc_integral(t, Omega):
     """
     integral of sinc_Omega(t) = sin(Omega t)/(pi t)
 
@@ -39,7 +41,7 @@ def Si(t, Omega):
     return sici(Omega * t)[0] / np.pi
 
 
-def Sii(t, Omega):
+def sinc_second_integral(t, Omega):
     """
     second integral of sinc_Omega(t) = sin(Omega t)/(pi t)
 
@@ -59,7 +61,7 @@ def Sii(t, Omega):
     return (np.cos(Omega * t) + Omega * t * sici(Omega * t)[0]) / (Omega * np.pi)
 
 
-def Di(t, period, n_components):
+def dirichlet_integral(t, period, n_components):
     """
     integral of dirichlet kernel
 
@@ -91,7 +93,7 @@ def Di(t, period, n_components):
     return integral
 
 
-def Di2(t, period, component):
+def dirichlet_component_integral(t, period, component):
     """
     integral of one cosine of the expansion dirichlet kernel
     assuming D_n(t) = 1/2pi (1+2 sum_(k=1 to n) (cos kx)
@@ -112,7 +114,7 @@ def Di2(t, period, component):
         period between time 0 and time t
     """
 
-    if component == 0:
+    if isinstance(component, int) and component == 0:
         integral = t
     else:
         integral = (
@@ -120,11 +122,13 @@ def Di2(t, period, component):
             / (component * 2 * np.pi / period)
             * np.sin(component * 2 * np.pi / period * t)
         )
+        if not isinstance(component, int):
+            integral[np.where(component == 0)] = t
 
     return integral
 
 
-def Dii(t, period, n_components):
+def dirichlet_second_integral(t, period, n_components):
     """
     second integral of dirichlet kernel
 
@@ -154,6 +158,7 @@ def Dii(t, period, n_components):
         )
     return integral
 
+
 def exp_int(exponent, t_start, t_end, tolerance=1e-18):
     """
     integral of complex exponential with exponent exponent
@@ -181,7 +186,9 @@ def exp_int(exponent, t_start, t_end, tolerance=1e-18):
         If t_start and t_end do not have the same length
     """
     if len(t_start) != len(t_end):
-        raise ValueError("You should have as many end times as start times for the integrals of the exponentials")
+        raise ValueError(
+            "You should have as many end times as start times for the integrals of the exponentials"
+        )
     integrals = np.zeros((len(exponent), len(t_start)), dtype=np.complex_)
     t_start = np.atleast_2d(t_start)
     t_end = np.atleast_2d(t_end)
@@ -215,6 +222,7 @@ def indicator_matrix(dimensions, indices_list):
         mat[indices] += 1
 
     return mat
+
 
 def singular_value_projection_w_matrix(shape, sensing_matrix, b, rank, tol, lr):
     """

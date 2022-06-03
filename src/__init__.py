@@ -6,6 +6,7 @@ import bisect
 import copy
 import time
 import warnings
+from enum import Enum, auto
 import src.Helpers
 from .TEMParams import *
 import src.Signals.Signal as Signal

@@ -1,7 +1,7 @@
 from src import *
 
 
-class spikeTimes(object):
+class SpikeTimes(object):
     """
     A class used to represent spike times of one or multiple TEMs
 
@@ -26,7 +26,7 @@ class spikeTimes(object):
 
     def __repr__(self):
         return (
-            "spikeTimes with "
+            "SpikeTimes with "
             + str(self.n_channels)
             + " channels and the following spike output: "
             + str(self.spikes)
@@ -69,17 +69,17 @@ class spikeTimes(object):
         channel: int
             desired channel
         asSpikeTimesObject: bool
-            specifies if output should be in the form of a spikeTimes object (if True)
+            specifies if output should be in the form of a SpikeTimes object (if True)
             or in the form of a list (if False)
 
         Returns
         -------
-        list or spikeTimes object
-            a list or a spikeTimes object which contains the spike times of channel channel
+        list or SpikeTimes object
+            a list or a SpikeTimes object which contains the spike times of channel channel
         """
 
         if asSpikeTimesObject:
-            spikes_single = spikeTimes(n_channels=1)
+            spikes_single = SpikeTimes(n_channels=1)
             spikes_single.spikes = [self.spikes[channel]]
             return spikes_single
         return np.array(self.spikes[channel])
@@ -208,12 +208,12 @@ class spikeTimes(object):
 
         Returns
         -------
-        spikeTimes
-            spikeTimes object which is similar to self but where the
+        SpikeTimes
+            SpikeTimes object which is similar to self but where the
             spike times are corrupted by Gaussian noise of the given SNR
         """
 
-        corrupted_spikeTimes = spikeTimes(self.n_channels)
+        corrupted_SpikeTimes = SpikeTimes(self.n_channels)
         for ch in range(self.n_channels):
             spike_dif = np.diff(self.get_spikes_of(ch))
             spike_dif_power = np.linalg.norm(spike_dif) / len(spike_dif)
@@ -224,5 +224,5 @@ class spikeTimes(object):
             new_spikes_for_ch = [
                 self.spikes[ch][l] + added_noise[l] for l in range(len(added_noise))
             ]
-            corrupted_spikeTimes.add(ch, new_spikes_for_ch)
-        return corrupted_spikeTimes
+            corrupted_SpikeTimes.add(ch, new_spikes_for_ch)
+        return corrupted_SpikeTimes

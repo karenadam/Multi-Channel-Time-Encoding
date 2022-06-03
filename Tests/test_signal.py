@@ -7,13 +7,6 @@ sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 
 from src import *
 
-# from TimeEncoding import *
-# from TEMParams import TEMParams
-# from Encoder import *
-# from Decoder import *
-# from Signals import *
-# from Multi_Dimensional_Signal import *
-
 import scipy
 import scipy.signal
 
@@ -47,7 +40,6 @@ class TestBandlimitedSignal:
 
 
 class TestBandlimitedSignals:
-
     def test_mixing(self):
         sinc_locs = [1, 2, 3]
         sinc_amps = [[1, 0, 1], [1, 1, 0]]
@@ -254,7 +246,7 @@ class TestMultiDimPeriodicSignal:
         FT[1, 1, 1] = 1
 
         def sampled(xcord, ycord, tcord):
-            return (1 / 3 ** 3) * np.cos(2 * np.pi / 3 * (xcord + ycord + tcord))
+            return (1 / 3**3) * np.cos(2 * np.pi / 3 * (xcord + ycord + tcord))
 
         opt = {"freq_domain_samples": FT}
         signal = MultiDimPeriodicSignal(opt)
@@ -422,15 +414,21 @@ class TestMultiDimPeriodicSignal:
         tem_mult = TEMParams(kappa, deltas, b, np.eye(len(TEM_locations)))
         end_time = video.periods[-1]
         spikes = Encoder.ContinuousEncoder(tem_mult).encode(
-            signals, end_time, tol=1e-14, with_start_time=False
+            signals, end_time, tolerance=1e-14, with_start_time=False
         )
         # spikes = ContinuousEncoder(tem_mult).encode_video(video, TEM_locations,end_time, tol=1e-14, with_start_time = False)
 
-        integrals, integral_start_coordinates, integral_end_coordinates = Decoder.MSignalMChannelDecoder(
-            tem_mult
-        ).get_vid_constraints(
-            spikes, TEM_locations
+        decoder = Decoder.MSignalMChannelDecoder(
+            tem_mult,
+            periodic=True,
+            period=video.periods[-1],
+            n_components=video.num_components[-1],
         )
+        integrals = decoder.get_measurement_vector(spikes)
+        (
+            integral_start_coordinates,
+            integral_end_coordinates,
+        ) = decoder.get_integral_start_end_coordinates(spikes, TEM_locations)
         coefficients = video.get_coefficients_from_integrals(
             integral_start_coordinates, integral_end_coordinates, integrals
         )

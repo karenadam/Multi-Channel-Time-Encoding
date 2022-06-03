@@ -165,14 +165,11 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                Helpers.Si(t_end.T - sinc_locs, self.Omega)
-                - Helpers.Si(t_start.T - sinc_locs, self.Omega)
+                Helpers.sinc_integral(t_end.T - sinc_locs, self.Omega)
+                - Helpers.sinc_integral(t_start.T - sinc_locs, self.Omega)
             ),
             1,
         )
-
-    def set_sinc_amps(self, sinc_amps):
-        self.sinc_amps = sinc_amps
 
     def get_sinc_amps(self):
         return self.sinc_amps
@@ -322,8 +319,8 @@ class piecewiseConstantSignals(object):
             low_limit = np.array(self.discontinuities[signal_index][:-1])
             up_limit = np.array(self.discontinuities[signal_index][1:])
             return np.atleast_2d(
-                Helpers.Si(sample_loc - low_limit, omega)
-                - Helpers.Si(sample_loc - up_limit, omega)
+                Helpers.sinc_integral(sample_loc - low_limit, omega)
+                - Helpers.sinc_integral(sample_loc - up_limit, omega)
             )
 
         PCS_sampler_matrix = scipy.linalg.block_diag(
@@ -353,8 +350,10 @@ class lPFedPCSSignal(object):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                Helpers.Si(t - self.discontinuities[value_index], self.omega)
-                - Helpers.Si(t - self.discontinuities[value_index + 1], self.omega)
+                Helpers.sinc_integral(t - self.discontinuities[value_index], self.omega)
+                - Helpers.sinc_integral(
+                    t - self.discontinuities[value_index + 1], self.omega
+                )
             )
         return samples
 

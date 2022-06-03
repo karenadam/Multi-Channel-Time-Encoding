@@ -1,5 +1,6 @@
 from src import *
 
+
 class complex_vector_constraints(object):
     """
     A class that can return constraints on a complex vector which

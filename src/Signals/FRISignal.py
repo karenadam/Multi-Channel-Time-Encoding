@@ -88,9 +88,6 @@ class AnnihilatingFilter(object):
                     n_s, self._num_taps + n_t
                 ]
 
-        print(operator)
-        print(np.linalg.matrix_rank(operator))
-        print(measurements)
         self._filter_coefficients = np.ones((self._num_taps, 1), dtype="complex")
         self._filter_coefficients[1:] = np.linalg.lstsq(
             operator, measurements, rcond=None
@@ -101,7 +98,6 @@ class AnnihilatingFilter(object):
         return self._filter_coefficients.flatten()
 
     def get_annihilation_operator(self):
-        # print(self._num_taps)
         num_annihilation_constraints = self._num_taps - 1
         num_real_signal_constraints = self._num_taps - 1
         operator = np.zeros(

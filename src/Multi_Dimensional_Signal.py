@@ -7,6 +7,11 @@ class _MultiDimSignal(object):
 
 
 class MultiDimPeriodicSignal(_MultiDimSignal):
+    """
+    Implements a multi dimensional signal which is periodic.
+    Main use is to represent video
+    """
+
     # Note that freq_domain_samples are assumed to be FFT samples (so the complex conjugate counterpart is not explicitly included in the variable)
     def __init__(self, opt):
         if "time_domain_samples" in opt:
@@ -284,10 +289,6 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
     def get_coefficients_from_integrals(
         self, integral_start_coordinates, integral_end_coordinates, integrals
     ):
-        assert len(integral_start_coordinates) == len(integral_end_coordinates) and len(
-            integrals
-        ) == len(integral_start_coordinates)
-
         num_samples = len(integrals)
 
         def get_linear_operator(sample_i):

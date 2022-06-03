@@ -45,6 +45,16 @@ class Layer(object):
         if weight_matrix is not None:
             self.set_weight_matrix(weight_matrix)
 
+    def __repr__(self):
+        return (
+            "Layer with "
+            + str(self.num_inputs)
+            + " inputs, "
+            + str(self.num_outputs)
+            + " outputs and weight matrix:\n"
+            + str(self.weight_matrix)
+        )
+
     def set_weight_matrix(self, weight_matrix):
         """
         Parameters
@@ -63,16 +73,28 @@ class Layer(object):
 
         if len(weight_matrix.shape) != 2:
             raise ValueError("The weight matrix should have two dimensions")
-        if weight_matrix.shape[0]!=self.num_outputs:
-            raise ValueError("The weight matrix should have " + str(self.num_outputs) +" outputs but has " + str(weight_matrix.shape[0]) + " outputs instead")
+        if weight_matrix.shape[0] != self.num_outputs:
+            raise ValueError(
+                "The weight matrix should have "
+                + str(self.num_outputs)
+                + " outputs but has "
+                + str(weight_matrix.shape[0])
+                + " outputs instead"
+            )
 
-        if weight_matrix.shape[1]!=self.num_inputs:
-            raise ValueError("The weight matrix should have " + str(self.num_inputs) +" inputs but has " + str(weight_matrix.shape[1]) + " inputs instead")
+        if weight_matrix.shape[1] != self.num_inputs:
+            raise ValueError(
+                "The weight matrix should have "
+                + str(self.num_inputs)
+                + " inputs but has "
+                + str(weight_matrix.shape[1])
+                + " inputs instead"
+            )
         self.weight_matrix = copy.deepcopy(weight_matrix)
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
     def get_ex_measurement_pairs(
-        self, input: Signal.SignalCollection, spike_times: spikeTimes
+        self, input: Signal.SignalCollection, spike_times: SpikeTimes
     ):
         """
         returns the measurement matrix and vector corresponding to the weight matrix of
@@ -82,7 +104,7 @@ class Layer(object):
         ----------
         input: Signal.SignalCollection
             input to the layer in this example
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
 
         Returns
@@ -172,7 +194,7 @@ class Layer(object):
         ----------
         input: Signal.SignalCollection
             input to the layer in this example
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
 
         Raises
@@ -187,9 +209,11 @@ class Layer(object):
             measurement_results,
         ) = self.get_ex_measurement_pairs(input, spike_times)
 
-        self.set_weight_matrix(self.get_weight_matrix_from_parallel_measurements(
-            measurement_matrices, measurement_results
-        ))
+        self.set_weight_matrix(
+            self.get_weight_matrix_from_parallel_measurements(
+                measurement_matrices, measurement_results
+            )
+        )
 
     def get_m_ex_measurement_pairs(self, input: list, spike_times: list):
         """
@@ -201,7 +225,7 @@ class Layer(object):
         input: list
             list of Signal.SignalCollection objects, input to the layer in the different examples
         spike_times: list
-            list of spikeTimes objects, spike time output of the layer in the different examples
+            list of SpikeTimes objects, spike time output of the layer in the different examples
 
         Raises
         ------
@@ -220,8 +244,10 @@ class Layer(object):
         """
 
         num_examples = len(input)
-        if len(spike_times)!=len(input):
-            raise ValueError("The number of inputs and outputs you provide does not match")
+        if len(spike_times) != len(input):
+            raise ValueError(
+                "The number of inputs and outputs you provide does not match"
+            )
 
         ex_measurement_pairs = [
             self.get_ex_measurement_pairs(input[n_e], spike_times[n_e])
@@ -254,7 +280,7 @@ class Layer(object):
         input: list
             list of Signal.SignalCollection objects, input to the layer in the different examples
         spike_times: list
-            list of spikeTimes objects, spike time output of the layer in the different examples
+            list of SpikeTimes objects, spike time output of the layer in the different examples
 
         Raises
         ------
@@ -268,9 +294,11 @@ class Layer(object):
             measurement_results,
         ) = self.get_m_ex_measurement_pairs(input, spike_times)
 
-        self.set_weight_matrix(self.get_weight_matrix_from_parallel_measurements(
-            measurement_matrices, measurement_results
-        ))
+        self.set_weight_matrix(
+            self.get_weight_matrix_from_parallel_measurements(
+                measurement_matrices, measurement_results
+            )
+        )
 
         return
 
@@ -344,7 +372,7 @@ class Layer(object):
 
         Parameters
         ----------
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
         n_fsc: int
             fourier series coefficients range from index -n_fsc+1 to n_fsc-1
@@ -362,7 +390,9 @@ class Layer(object):
             spike_times, n_fsc, period
         )
 
-        self.set_weight_matrix(sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T)
+        self.set_weight_matrix(
+            sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T
+        )
         return recovered_times
 
     def get_diracs_from_spikes(
@@ -374,7 +404,7 @@ class Layer(object):
 
         Parameters
         ----------
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
         n_fsc: int
             fourier series coefficients range from index -n_fsc+1 to n_fsc-1
@@ -397,7 +427,7 @@ class Layer(object):
         )
 
         recovered_times = self.get_dirac_times_from_fsc(
-            preactivation_fsc, n_fsc+1, period
+            preactivation_fsc, n_fsc + 1, period
         )
         unmixed_fsc = self.get_fsc_of_unit_diracs(recovered_times, n_fsc, period)
 
@@ -423,7 +453,7 @@ class Layer(object):
         Parameters
         ----------
         spike_times: list
-            list of spikeTimes objects, spike time output of the layer in the different examples
+            list of SpikeTimes objects, spike time output of the layer in the different examples
         n_fsc: int
             fourier series coefficients range from index -n_fsc+1 to n_fsc-1
         period: float
@@ -470,7 +500,7 @@ class Layer(object):
 
         Parameters
         ----------
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
         n_o: int
             index of output node for which we would like to compute the input's
@@ -556,7 +586,7 @@ class Layer(object):
 
         Parameters
         ----------
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
         n_o: int
             index of output node for which we would like to compute the input's
@@ -607,7 +637,7 @@ class Layer(object):
 
         Parameters
         ----------
-        spike_times: spikeTimes
+        spike_times: SpikeTimes
             spike time output of the layer in this example
         n_fsc: int
             we compute the fourier series coefficients ranging from -n_fsc+1 to n_fsc-1
