@@ -90,11 +90,10 @@ class periodicBandlimitedSignals(SignalCollection):
         self.n_signals = (
             len(coefficient_values) if coefficient_values is not None else 0
         )
-        self._signals = []
-        for n in range(self.n_signals):
-            self._signals.append(
-                periodicBandlimitedSignal(period, n_components, coefficient_values[n])
-            )
+        self._signals = [
+            periodicBandlimitedSignal(period, n_components, coefficient_values[n])
+            for n in range(self.n_signals)
+        ]
         self.coefficient_values = (
             coefficient_values if coefficient_values is not None else []
         )
@@ -141,13 +140,9 @@ class bandlimitedSignal(Signal):
         samples_per_period = int(T / delta_t)
         n_sincs = int(len(t) / samples_per_period)
         self.n_sincs = n_sincs
-        self.sinc_locs = []
-        self.sinc_amps = []
-        for n in range(n_sincs - 2 * padding):
-            self.sinc_locs.append(T * (n + padding))
-            a = np.random.uniform(0, 1)
-            self.sinc_amps.append(a)
-        scale = 2 * np.sqrt(np.mean([a ** 2 for a in self.sinc_amps]))
+        self.sinc_locs = [(T * (n + padding)) for n in range(n_sincs - 2 * padding)]
+        self.sinc_amps = [np.random.uniform(0, 1) for n in range(n_sincs - 2 * padding)]
+        scale = 2 * np.sqrt(np.mean([a**2 for a in self.sinc_amps]))
         self.sinc_amps = self.sinc_amps / scale
 
     def sample(self, t):
@@ -170,14 +165,11 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                Helpers.Si(t_end.T - sinc_locs, self.Omega)
-                - Helpers.Si(t_start.T - sinc_locs, self.Omega)
+                Helpers.sinc_integral(t_end.T - sinc_locs, self.Omega)
+                - Helpers.sinc_integral(t_start.T - sinc_locs, self.Omega)
             ),
             1,
         )
-
-    def set_sinc_amps(self, sinc_amps):
-        self.sinc_amps = sinc_amps
 
     def get_sinc_amps(self):
         return self.sinc_amps
@@ -197,9 +189,10 @@ class bandlimitedSignals(SignalCollection):
     def __init__(self, Omega, sinc_locs=None, sinc_amps=None, padding=0):
 
         self.n_signals = len(sinc_amps) if sinc_amps is not None else 0
-        self.signals = []
-        for n in range(self.n_signals):
-            self.signals.append(bandlimitedSignal(Omega, sinc_locs, sinc_amps[n]))
+        self.signals = [
+            bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
+            for n in range(self.n_signals)
+        ]
         self.sinc_locs = sinc_locs if sinc_locs is not None else []
         self.sinc_amps = sinc_amps if sinc_amps is not None else []
         self.Omega = Omega
@@ -255,69 +248,13 @@ class bandlimitedSignals(SignalCollection):
             self.signals[n].set_sinc_amps(sinc_amps[n])
         self.sinc_amps = copy.deepcopy(sinc_amps)
 
-    def get_integrals(self, t_start, t_end):
-        values = [item for sublist in self.sinc_amps for item in sublist]
-        return self.get_integral_matrix(t_start, t_end).dot(values)
-
-    def get_integral_matrix(self, t_start, t_end):
-        assert len(t_start) == self.n_signals
-        assert len(t_start) == len(t_end)
-        t_start_flattened = [item for sublist in t_start for item in sublist]
-        total_num_integrals = len(t_start_flattened)
-        values = [item for sublist in self.sinc_amps for item in sublist]
-        total_num_values = len(values)
-        sinc_locs = np.array(self.sinc_locs)
-
-        sinc_integral_matrix = np.zeros((total_num_integrals, total_num_values))
-        matrix_column_index = 0
-        matrix_row_index = 0
-        for signal_index in range(self.n_signals):
-            num_integrals = len(t_start[signal_index])
-            integ_up_limit = t_end[signal_index]
-            integ_low_limit = t_start[signal_index]
-            num_values = len(self.sinc_amps[signal_index])
-            for integral_index in range(num_integrals):
-                multiplier_vector = Helpers.Si(
-                    integ_up_limit[integral_index] - sinc_locs, self.Omega
-                ) - Helpers.Si(integ_low_limit[integral_index] - sinc_locs, self.Omega)
-                sinc_integral_matrix[
-                    matrix_row_index,
-                    matrix_column_index : matrix_column_index + num_values,
-                ] = multiplier_vector
-                matrix_row_index += 1
-            matrix_column_index += num_values
-
-        return sinc_integral_matrix
-
     def mix_amplitudes(self, mixing_matrix):
-        values = [item for sublist in self.sinc_amps for item in sublist]
-
-        return self.get_flattened_mixing_matrix(mixing_matrix).dot(values)
+        return np.array(mixing_matrix).dot(np.array(self.sinc_amps)).flatten()
 
     def get_mixed_signals(self, mixing_matrix):
         new_amps = mixing_matrix.dot(self.sinc_amps)
         new_signals = bandlimitedSignals(self.Omega, self.sinc_locs, new_amps)
         return new_signals
-
-    def get_flattened_mixing_matrix(self, mixing_matrix):
-        mixing_matrix = np.array(mixing_matrix)
-        assert mixing_matrix.shape[1] == self.n_signals
-        values = [item for sublist in self.sinc_amps for item in sublist]
-        total_num_values = len(values)
-        num_sincs = len(self.sinc_locs)
-
-        flattened_mixing_matrix = np.zeros(
-            (num_sincs * mixing_matrix.shape[0], num_sincs * mixing_matrix.shape[1])
-        )
-        matrix_column_index = 0
-        matrix_row_index = 0
-        for signal_index in range(mixing_matrix.shape[0]):
-            for sinc_index in range(num_sincs):
-                flattened_mixing_matrix[
-                    matrix_row_index, sinc_index::num_sincs
-                ] = mixing_matrix[signal_index, :]
-                matrix_row_index += 1
-        return flattened_mixing_matrix
 
 
 class piecewiseConstantSignal(object):
@@ -356,9 +293,10 @@ class piecewiseConstantSignals(object):
         self.discontinuities = discontinuities
         self.values = values
         self.n_signals = len(discontinuities)
-        self.signals = []
-        for n in range(self.n_signals):
-            self.signals.append(piecewiseConstantSignal(discontinuities[n], values[n]))
+        self.signals = [
+            piecewiseConstantSignal(discontinuities[n], values[n])
+            for n in range(self.n_signals)
+        ]
 
     def add(self, signal):
         self.signals.append(signal)
@@ -377,33 +315,25 @@ class piecewiseConstantSignals(object):
         return samples
 
     def get_sampler_matrix(self, sample_locs, omega):
-        num_samples = len(sample_locs)
-        sample_locs = np.atleast_2d(sample_locs).T
-        values = [item for sublist in self.values for item in sublist]
-        total_num_values = len(values)
-        values = np.atleast_2d(values).T
+        def multiplier_vector(sample_loc, signal_index):
+            low_limit = np.array(self.discontinuities[signal_index][:-1])
+            up_limit = np.array(self.discontinuities[signal_index][1:])
+            return np.atleast_2d(
+                Helpers.sinc_integral(sample_loc - low_limit, omega)
+                - Helpers.sinc_integral(sample_loc - up_limit, omega)
+            )
 
-        PCS_sampler_matrix = np.zeros((self.n_signals * num_samples, total_num_values))
-
-        matrix_column_index = 0
-        matrix_row_index = 0
-        for signal_index in range(self.n_signals):
-            num_discontinuities = len(self.discontinuities[signal_index])
-            num_values = len(self.values[signal_index])
-            for sample_index in range(num_samples):
-                low_limit = self.discontinuities[signal_index][:-1]
-                up_limit = self.discontinuities[signal_index][1:]
-                multiplier_vector = Helpers.Si(
-                    sample_locs[sample_index] - low_limit, omega
-                ) - Helpers.Si(sample_locs[sample_index] - up_limit, omega)
-                PCS_sampler_matrix[
-                    matrix_row_index,
-                    matrix_column_index : matrix_column_index + num_values,
-                ] = multiplier_vector
-                matrix_row_index += 1
-
-            matrix_column_index += num_values
-
+        PCS_sampler_matrix = scipy.linalg.block_diag(
+            *[
+                np.concatenate(
+                    [
+                        multiplier_vector(sample_loc, signal_index)
+                        for sample_loc in sample_locs
+                    ]
+                )
+                for signal_index in range(self.n_signals)
+            ]
+        )
         return PCS_sampler_matrix
 
     def get_signal(self, signal_index):
@@ -420,8 +350,10 @@ class lPFedPCSSignal(object):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                Helpers.Si(t - self.discontinuities[value_index], self.omega)
-                - Helpers.Si(t - self.discontinuities[value_index + 1], self.omega)
+                Helpers.sinc_integral(t - self.discontinuities[value_index], self.omega)
+                - Helpers.sinc_integral(
+                    t - self.discontinuities[value_index + 1], self.omega
+                )
             )
         return samples
 

@@ -1,116 +1,317 @@
 from src import *
 
+
 class Decoder(object):
-    def __init__(self, tem_parameters):
+    """
+    Base class for decoders from spike times emitted by integrate-
+    and-fire time encoding machines.
+
+    ATTRIBUTES
+    ----------
+    params: TEMParams
+        Object which holds the parameters of the time encoding machines
+    n_channels: int
+        counts the number of channels used to perform the encoding
+    periodic: bool
+        specifies if the decoder aims to recover periodic signals
+    Omega: float
+        bandwidth of nonperiodic signal
+    period: float
+        period of periodic signal
+    n_components: int
+        number of FS components of periodic signal
+    """
+
+    def __init__(self, tem_parameters, periodic, Omega, period, n_components):
+        """
+        PARAMETERS
+        ----------
+        tem_parameters: TEMParams
+            Object which holds the parameters of the time encoding machines
+        periodic: bool
+            specifies if the decoder aims to recover periodic signals
+        Omega: float
+            bandwidth of nonperiodic signal
+        period: float
+            period of periodic signal
+        n_components: int
+            number of FS components of periodic signal
+        """
+
         self.params = tem_parameters
-        self.__dict__.update(self.params.__dict__)
+        self.n_channels = self.params.n_channels
+        self.check_signal_type(periodic, Omega, period, n_components)
+        self.periodic = periodic
+        self.Omega = Omega
+        self.period = period
+        self.n_components = n_components
 
-    def decode(self, signal):
-        raise NotImplementedError
+    def __repr__(self):
+        repr = "Decoder object for "
+        if self.periodic:
+            repr += (
+                "periodic bandlimited signals with period "
+                + str(self.period)
+                + " and "
+                + str(self.n_components)
+                + " components, "
+            )
+        else:
+            repr += (
+                "nonperiodic bandlimited signals with bandwidth "
+                + str(self.Omega)
+                + ", "
+            )
+        repr += "with TEM parameters \n" + str(self.params)
+        return repr
 
-    def apply_g(
-        self,
-        G_pl,
-        q,
-        spikes,
-        t,
-        periodic=False,
-        Omega=None,
-        period=None,
-        n_components=None,
+    def check_signal_type(
+        self, periodic: bool, Omega: float, period: float, n_components: int
     ):
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        """
+        Checks that the parameters provided are consistent with the (a)periodicity
+        of the signal
 
-        def Ki(t):
-            if periodic:
-                return Helpers.Di(t, period, n_components)
-            else:
-                return Helpers.Si(t, Omega)
+        Parameters
+        ----------
+        periodic: bool
+            specifies whether or not signal to recover is periodic
+        Omega: float
+            specifies bandwidth of signal to recover if it is not periodic
+        period: float
+            specifies period of periodic signal
+        n_components: int
+            number of fourier series components of the periodic signal
 
-        x = np.zeros_like(t)
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_midpoints = spikes.get_midpoints(ch)
-
-            integral_up_bound = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[1:]).T
-            integral_low_bound = np.atleast_2d(t) - np.atleast_2d(spikes_in_ch[:-1]).T
-            kernel = (Ki(integral_up_bound) - Ki(integral_low_bound)) / (
-                spikes_in_ch[1:, None] - spikes_in_ch[:-1, None]
+        Raises
+        ------
+        ValueError
+            If it is not periodic but no bandwidth is specified, or
+            it is periodic and either (or both) of the period or number
+            of components is not defined
+        """
+        if not periodic and Omega is not None:
+            return
+        elif periodic and (period is not None) and (n_components is not None):
+            return
+        else:
+            raise ValueError(
+                "the type of signal is not consistent with the parameters given"
             )
 
-            x += G_pl[start_index : start_index + n_spikes_in_ch - 1].dot(q).dot(kernel)
-            start_index += n_spikes_in_ch - 1
+    def get_measurement_vector(self, spikes: SpikeTimes):
+        """
+        computes the results of the linear measurements imposed by the spike
+        times of the integrate-and-fire time encoding machines
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the time of the spikes emitted by different integrate-and-fire
+            time encoding machines
+
+        RETURNS
+        -------
+        np.ndarray
+            measurement vector (resulting from measurement operator defined in
+            specific decoders)
+        """
+
+        q = np.concatenate(
+            [
+                -self.params.b[ch] * (np.diff(spikes[ch], axis=0))
+                + 2 * self.params.kappa[ch] * (self.params.delta[ch])
+                for ch in range(self.n_channels)
+            ]
+        )
+        return q
+
+
+class SSignalMChannelDecoder(Decoder):
+    """
+    Class for a decoder that can use spike times emitted by multiple
+    integrate-and-fire time encoding machines to reconstruct one signal
+    fed into the multiple machine
+
+    ATTRIBUTES
+    ----------
+    params: TEMParams
+        Object which holds the parameters of the time encoding machines
+    n_channels: int
+        counts the number of channels used to perform the encoding
+    periodic: bool
+        specifies if the decoder aims to recover periodic signals
+    Omega: float
+        bandwidth of nonperiodic signal
+    period: float
+        period of periodic signal
+    n_components: int
+        number of FS components of periodic signal
+    """
+
+    def __init__(
+        self, tem_parameters, periodic=False, Omega=None, period=None, n_components=None
+    ):
+        """
+        PARAMETERS
+        ----------
+        tem_parameters: TEMParams
+            Object which holds the parameters of the time encoding machines
+        periodic: bool
+            specifies if the decoder aims to recover periodic signals
+        Omega: float
+            bandwidth of nonperiodic signal
+        period: float
+            period of periodic signal
+        n_components: int
+            number of FS components of periodic signal
+        """
+
+        super().__init__(tem_parameters, periodic, Omega, period, n_components)
+
+    def __repr__(self):
+        repr = "Single Signal, Multi Channel Decoder object for "
+        if self.periodic:
+            repr += (
+                "periodic bandlimited signals with period "
+                + str(self.period)
+                + " and "
+                + str(self.n_components)
+                + " components, "
+            )
+        else:
+            repr += (
+                "nonperiodic bandlimited signals with bandwidth "
+                + str(self.Omega)
+                + ", "
+            )
+        repr += "with TEM parameters \n" + str(self.params)
+        return repr
+
+    def decode(self, spikes, t, cond_n=1e-15):
+        """
+        Method that decodes a signal from its spike times, returning
+        a sampled version of the signal by returning
+        x(t) = sum_k (y_k kernel(t-s_k))
+        where s_k are the midpoints of the spike times,
+        y_k = pinv(G).q,
+        where G is measurement matrix and q is a measurement vector
+        Follows method elaborated in Adam, Scholefield and Vetterli (2020)
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the same signal
+        t: np.ndarray
+            vector holding the times at which one would like the recovered signal
+            to be sampled
+
+        RETURNS
+        -------
+        np.ndarray
+            vector containing input signal sampled at times t
+        """
+
+        self.__dict__.update(self.params.__dict__)
+
+        q = self.get_measurement_vector(spikes)
+        G = self.get_measurement_operator(spikes)
+        G_pl = np.linalg.pinv(G, rcond=cond_n)
+
+        kernels = self._get_kernels_from_spikes(spikes, t)
+        x = G_pl.dot(q).dot(kernels)
         return x
 
-    def unweighted_multi_channel(self):
-        # Checks if one signal is fed with weight one to all channels
-        # If it is, the reconstruction can be done in closed form
-        if self.mixing_matrix.shape[1] == 1:
-            if (self.mixing_matrix == np.ones_like(self.mixing_matrix)).all():
-                return True
-        return False
+    def get_measurement_operator(self, spikes):
+        """
+        Provides the measurement matrix G required to perform the decoding
+        in the decode method of this class
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the same signal
 
-    def get_closed_form_matrices(
-        self, spikes, periodic=False, Omega=None, period=None, n_components=None
-    ):
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
-        n_spikes = spikes.get_total_num_spikes()
+        RETURNS
+        -------
+        np.ndarray
+            matrix containing the measurement matrix G
+        """
 
-        def Kii(t):
-            if periodic:
-                return Helpers.Dii(t, period, n_components)
-            else:
-                return Helpers.Sii(t, Omega)
-
-        q = np.zeros((n_spikes - self.n_channels, self.n_channels))
-        G = np.zeros((n_spikes - self.n_channels, n_spikes - self.n_channels))
-
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1, ch] = -self.b[ch] * (
-                spike_diff
-            ) + 2 * self.kappa[ch] * (self.delta[ch])
-
-            start_index_j = 0
-            for ch_j in range(self.n_channels):
-                n_spikes_in_ch_j = spikes.get_n_spikes_of(ch_j)
-                spikes_in_ch_j = spikes.get_spikes_of(ch_j)
-
-                sum_k_l, sum_k1_l1, sum_k1_l, sum_k_l1, diff_l1_l = self.get_integral_start_and_end_points(spikes_in_ch, spikes_in_ch_j)
-
-                G[
-                    start_index : start_index + n_spikes_in_ch - 1,
-                    start_index_j : start_index_j + n_spikes_in_ch_j - 1,
-                ] = (Kii(sum_k1_l1) - Kii(sum_k_l1) - Kii(sum_k1_l) + Kii(sum_k_l)) / (
-                    diff_l1_l
+        return np.concatenate(
+            [
+                np.concatenate(
+                    [
+                        self._get_measurement_bloc(spikes, ch, ch_j)
+                        for ch_j in range(self.n_channels)
+                    ],
+                    axis=1,
                 )
+                for ch in range(self.n_channels)
+            ],
+            axis=0,
+        )
 
-                start_index_j += n_spikes_in_ch_j - 1
+    def _get_measurement_bloc(self, spikes, ch_i, ch_j):
+        """
+        computes a bloc of the measurement matrix G that is computed in
+        the get_measurement_operator method
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the same signal
+        ch_i: int
+            index of the measuring channel
+        ch_j: int
+            index of the channel which generates the kernels whose amplitudes
+            we would like to recover
 
-            start_index += n_spikes_in_ch - 1
+        RETURNS
+        -------
+        np.ndarray
+            matrix containing a block of the measurement matrix G
+        """
 
-        if self.unweighted_multi_channel():
-            q = np.sum(q, 1)
+        (
+            sum_k_l,
+            sum_k1_l1,
+            sum_k1_l,
+            sum_k_l1,
+            diff_l1_l,
+        ) = self._get_integral_start_and_end_points(spikes[ch_i], spikes[ch_j])
 
-        return q, G
+        return (
+            self._kernel_integral(sum_k1_l1)
+            - self._kernel_integral(sum_k_l1)
+            - self._kernel_integral(sum_k1_l)
+            + self._kernel_integral(sum_k_l)
+        ) / (diff_l1_l)
 
-    def get_integral_start_and_end_points(self, spikes_in_ch, spikes_in_ch_j):
-        n_spikes_in_ch_j = len(spikes_in_ch_j)
-        n_spikes_in_ch = len(spikes_in_ch)
+    def _get_integral_start_and_end_points(self, spikes_in_ch_i, spikes_in_ch_j):
+        """
+        returns starting and and end points of different required integrals
+        of the kernel used
+        PARAMETERS
+        ----------
+        spikes_in_ch_i: list
+            list of spike times of channel ch_i
+        spikes_in_ch_j: list
+            list of spike times of channel ch_j
+
+        RETURNS
+        -------
+        list
+            list of np.ndarray 2D matrices containing required start and end
+            times of integral of the kernel
+        """
 
         t_k_matrix = np.transpose(
-            np.matlib.repmat(spikes_in_ch, n_spikes_in_ch_j, 1)
+            np.matlib.repmat(spikes_in_ch_i, len(spikes_in_ch_j), 1)
         )
-        t_l_matrix = np.matlib.repmat(spikes_in_ch_j, n_spikes_in_ch, 1)
+        t_l_matrix = np.matlib.repmat(spikes_in_ch_j, len(spikes_in_ch_i), 1)
+
         sum_k_l = t_k_matrix[:-1, :-1] - t_l_matrix[:-1, :-1]
         sum_k1_l1 = t_k_matrix[1:, 1:] - t_l_matrix[1:, 1:]
         sum_k1_l = t_k_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
@@ -118,320 +319,635 @@ class Decoder(object):
         diff_l1_l = t_l_matrix[1:, 1:] - t_l_matrix[:-1, :-1]
         return sum_k_l, sum_k1_l1, sum_k1_l, sum_k_l1, diff_l1_l
 
+    def _get_kernels_from_spikes(self, spikes, t):
+        """
+        obtains the kernels that should be applied to recover the
+        input signal x
+        x(t) = sum_k (y_k kernel(t-s_k))
 
-class SSignalMChannelDecoder(Decoder):
-    def decode(
-        self,
-        spikes,
-        t,
-        periodic=False,
-        Omega=None,
-        period=None,
-        n_components=None,
-        cond_n=1e-15,
-    ):
-        self.__dict__.update(self.params.__dict__)
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the same signal
+        t: np.ndarray
+            vector holding the times at which one would like the recovered signal
+            to be sampled
 
-        y = np.zeros((self.n_signals, len(t)))
-        q, G = self.get_closed_form_matrices(
-            spikes,
-            periodic=periodic,
-            Omega=Omega,
-            period=period,
-            n_components=n_components,
-        )
-        G_pl = np.linalg.pinv(G, rcond=cond_n)
+        RETURNS
+        -------
+        np.ndarray
+            matrix with as many rows as there are measurements from the spike times
+            and as many columns as there are times at which the signal is sampled
+        """
 
-        x = self.apply_g(
-            G_pl,
-            q,
-            spikes,
-            t,
-            periodic=periodic,
-            Omega=Omega,
-            period=period,
-            n_components=n_components,
+        def get_kernels_per_channel(spikes, ch, t):
+            spikes_in_ch = np.atleast_2d(spikes[ch]).T
+            t = np.atleast_2d(t)
+            kernels = (
+                self._kernel(t - spikes_in_ch[1:, :])
+                - self._kernel(t - spikes_in_ch[:-1, :])
+            ) / (np.diff(spikes_in_ch, axis=0))
+            return kernels
+
+        return np.concatenate(
+            [get_kernels_per_channel(spikes, ch, t) for ch in range(self.n_channels)]
         )
 
-        return x
+    def _kernel(self, t):
+        """
+        Returns the kernel used for recovery, i.e. the integral of the
+        function which applies bandlimitation.
+        In the case of a nonperiodic function, this is a sinc function.
+        In the case of a periodic function, this is a dirichlet function.
+
+        PARAMETERS
+        ----------
+        t: float or np.ndarray
+            time(s) at which the kernel should be sampled
+
+        RETURNS
+        -------
+        float or np.ndarray
+            kernel sampled at time(s) t
+        """
+
+        return (
+            Helpers.dirichlet_integral(t, self.period, self.n_components)
+            if self.periodic
+            else Helpers.sinc_integral(t, self.Omega)
+        )
+
+    def _kernel_integral(self, t):
+        """
+        Returns the second integral of the function which applies bandlimitation.
+        In the case of a nonperiodic function, this is a sinc function.
+        In the case of a periodic function, this is a dirichlet function.
+
+        PARAMETERS
+        ----------
+        t: float or np.ndarray
+            time(s) at which the second integral should be sampled
+
+        RETURNS
+        -------
+        float or np.ndarray
+            second integral sampled at time(s) t
+        """
+
+        return (
+            Helpers.dirichlet_second_integral(t, self.period, self.n_components)
+            if self.periodic
+            else Helpers.sinc_second_integral(t, self.Omega)
+        )
 
 
 class MSignalMChannelDecoder(Decoder):
-    def adjust_weight(self, PCS_sampler, t_start_flattened, t_end_flattened):
-        for n in range(PCS_sampler.shape[0]):
-            PCS_sampler[n, :] = PCS_sampler[n, :] / (
-                t_end_flattened - t_start_flattened
-            )
-        return PCS_sampler
+    """
+    Class for a decoder that can use spike times emitted by multiple
+    integrate-and-fire time encoding machines to reconstruct multiple
+    mixed signals fed into the multiple machine
 
-    def decode(self, spikes, t, sinc_locs, Omega, Delta_t, return_as_param=False):
-        self.__dict__.update(self.params.__dict__)
+    ATTRIBUTES
+    ----------
+    params: TEMParams
+        Object which holds the parameters of the time encoding machines
+    n_channels: int
+        counts the number of channels used to perform the encoding
+    periodic: bool
+        specifies if the decoder aims to recover periodic signals
+    Omega: float
+        bandwidth of nonperiodic signal
+    period: float
+        period of periodic signal
+    n_components: int
+        number of FS components of periodic signal
+    sinc_locs: np.ndarray
+        list of locations of sincs that make up an aperiodic signals
+    """
 
-        q, G = self.get_closed_form_matrices(spikes, periodic=False, Omega=Omega)
-        q = np.atleast_2d(q.T)
-        q = np.sum(q, 0)
-
-        mixing_matrix_inv = np.linalg.inv(
-            self.mixing_matrix.T.dot(self.mixing_matrix)
-        ).dot(self.mixing_matrix.T)
-
-        mixing_projector = self.mixing_matrix.dot(mixing_matrix_inv)
-
-        discontinuities = [
-            spikes.get_spikes_of(ch).tolist() for ch in range(self.n_channels)
-        ]
-        values = [[0] * (len(discontinuities[ch]) - 1) for ch in range(self.n_channels)]
-
-        PCSSignal = Signal.piecewiseConstantSignals(discontinuities, values)
-        Ysincs = Signal.bandlimitedSignals(
-            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_channels
-        )
-        Xsincs = Signal.bandlimitedSignals(
-            Omega, sinc_locs, sinc_amps=[[0] * len(sinc_locs)] * self.n_signals
-        )
-
-        t_start = [
-            spikes.get_spikes_of(ch).tolist()[:-1] for ch in range(self.n_channels)
-        ]
-        t_end = [spikes.get_spikes_of(ch).tolist()[1:] for ch in range(self.n_channels)]
-        PCS_sampler = PCSSignal.get_sampler_matrix(sinc_locs, Omega)
-
-        SumOfSincs_integ_computer = Ysincs.get_integral_matrix(t_start, t_end)
-
-        Mback = Ysincs.get_flattened_mixing_matrix(mixing_matrix_inv)
-        Mfor = Xsincs.get_flattened_mixing_matrix(self.mixing_matrix)
-
-        t_start_flattened = np.array([item for sublist in t_start for item in sublist])
-        t_end_flattened = np.array([item for sublist in t_end for item in sublist])
-        PCS_sampler = self.adjust_weight(
-            PCS_sampler, t_start_flattened, t_end_flattened
-        )
-
-        ps_inv = np.linalg.pinv(
-            Mback.dot(PCS_sampler).dot(SumOfSincs_integ_computer).dot(Mfor)
-        )
-
-        x_sinc_amps = ps_inv.dot(Mback).dot(PCS_sampler).dot(q)
-
-        x_sinc_amps = x_sinc_amps.reshape((self.n_signals, len(sinc_locs)))
-        x_param = Signal.bandlimitedSignals(
-            Omega, sinc_locs=sinc_locs, sinc_amps=x_sinc_amps
-        )
-
-        if return_as_param:
-            return x_param
-        else:
-            return x_param.sample(t)
-
-    def decode_periodic(
+    def __init__(
         self,
-        spikes,
-        t,
+        tem_parameters,
         periodic=False,
+        sinc_locs=None,
         Omega=None,
         period=None,
         n_components=None,
-        return_as_param=False,
     ):
+        """
+        PARAMETERS
+        ----------
+        tem_parameters: TEMParams
+            Object which holds the parameters of the time encoding machines
+        periodic: bool
+            specifies if the decoder aims to recover periodic signals
+        Omega: float
+            bandwidth of nonperiodic signal
+        period: float
+            period of periodic signal
+        n_components: int
+            number of FS components of periodic signal
+        sinc_locs: list or np.ndarray
+            list of locations of sincs that make up an aperiodic signals
+        """
 
-        assert (not periodic and Omega is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
-        n_spikes = spikes.get_total_num_spikes()
+        super().__init__(tem_parameters, periodic, Omega, period, n_components)
+        self.sinc_locs = np.array(sinc_locs)
 
-        q = np.zeros((n_spikes - self.n_channels, 1))
-        measurement_vectors = np.zeros(
-            (n_spikes - self.n_channels, self.n_signals * (2 * n_components - 1))
-        )
-
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1, 0] = -self.b[ch] * (
-                spike_diff
-            ) + 2 * self.kappa[ch] * (self.delta[ch])
-
-            a_ch = np.atleast_2d(self.mixing_matrix[ch, :])
-            components = (
-                1j * 2 * np.pi / period * np.arange(-n_components + 1, n_components, 1)
+    def __repr__(self):
+        repr = "Multi Signal, Multi Channel Decoder object for "
+        if self.periodic:
+            repr += (
+                "periodic bandlimited signals with period "
+                + str(self.period)
+                + " and "
+                + str(self.n_components)
+                + " components, "
             )
-            for n in range(n_spikes_in_ch - 1):
-                integrals = Helpers.exp_int(
-                    components, [spikes_in_ch[n]], [spikes_in_ch[n + 1]]
-                )
-                integrals[n_components - 1] = spikes_in_ch[n + 1] - spikes_in_ch[n]
-                measurement_vectors[start_index + n, :] = (
-                    a_ch.T.dot(integrals.T)
-                ).flatten()
-
-            start_index += n_spikes_in_ch - 1
-
-        recovered_coefficients_flattened = np.linalg.pinv(measurement_vectors).dot(q)
-        recovered_coefficients = np.reshape(
-            recovered_coefficients_flattened, (self.n_signals, 2 * n_components - 1)
-        )
-
-        x_param = Signal.periodicBandlimitedSignals(
-            period, n_components, recovered_coefficients
-        )
-        if return_as_param:
-            return x_param
         else:
-            return x_param.sample(t)
+            repr += (
+                "sum of sinc signals with bandwidth "
+                + str(self.Omega)
+                + " and sincs at locations "
+                + str(self.sinc_locs)
+                + ", "
+            )
+        repr += "with TEM parameters \n" + str(self.params)
+        return repr
 
-    def get_vid_constraints(self, spikes, TEM_locations):
-        n_spike_diffs = spikes.get_total_num_spike_diffs()
+    def decode(self, spikes, t=None, return_as_param=False):
+        """
+        Method that decodes mixed signals from their spike times, by
+        recovering coefficients of the functions that generate them
 
-        q = np.zeros((n_spike_diffs, 1))
-        start_coordinates = np.zeros((n_spike_diffs, 3))
-        end_coordinates = np.zeros((n_spike_diffs, 3))
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+        t: np.ndarray
+            vector holding the times at which one would like the recovered signal
+            to be sampled
+        return_as_param: bool
+           specifies if the input signal should be returned in its parametric form
+           (True) or sampled at t (False)
 
-        start_index = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            if n_spikes_in_ch <= 1:
-                continue
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index : start_index + n_spikes_in_ch - 1, 0] = [
-                -self.b[ch] * (sp_d) + 2 * self.kappa[ch] * (self.delta[ch])
-                for sp_d in spike_diff
+        RETURNS
+        -------
+        np.ndarray or Signal.SignalCollection
+            vector containing input signals sampled at times t or parametric form
+            of input signals
+        """
+        """
+        Method that decodes mixed signals from their spike times, by
+        recovering coefficients of the functions that generate them
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+        t: np.ndarray
+            vector holding the times at which one would like the recovered signal
+            to be sampled
+        return_as_param: bool
+           specifies if the input signal should be returned in its parametric form
+           (True) or sampled at t (False)
+
+        RETURNS
+        -------
+        np.ndarray or Signal.SignalCollection
+            vector containing input signals sampled at times t or parametric form
+            of input signals
+        """
+        self.__dict__.update(self.params.__dict__)
+
+        if self.periodic:
+            x_param = self._decode_periodic(spikes)
+        else:
+            x_param = self._decode_sum_of_sincs(spikes)
+        return x_param if return_as_param else x_param.sample(t)
+
+    def _decode_sum_of_sincs(self, spikes):
+        """
+        Method that decodes mixed signals from their spike times,
+        assuming they come from a sum of sincs at known locations
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+
+        RETURNS
+        -------
+        Signal.bandlimitedSignals
+            object containing the parametric form of the recovered input signals
+        """
+
+        q = self.get_measurement_vector(spikes)
+        integral_measurement_matrix = self._get_sinc_integral_matrix(spikes)
+        flat_fwd_mixing = self._flatten_mixing_matrix(self.mixing_matrix)
+        flat_bwd_mixing = self._flatten_mixing_matrix(
+            np.linalg.pinv(self.mixing_matrix)
+        )
+        PCS_sampler = self._get_PCS_sampler(spikes)
+
+        operator_inverse = np.linalg.pinv(
+            flat_bwd_mixing.dot(PCS_sampler)
+            .dot(integral_measurement_matrix)
+            .dot(flat_fwd_mixing)
+        )
+
+        x_sinc_amps = (
+            operator_inverse.dot(flat_bwd_mixing).dot(PCS_sampler).dot(q)
+        ).reshape((self.n_signals, len(self.sinc_locs)))
+
+        return Signal.bandlimitedSignals(self.Omega, self.sinc_locs, x_sinc_amps)
+
+    def _decode_periodic(self, spikes):
+        """
+        Method that decodes mixed signals from their spike times,
+        assuming they are periodic and come from a sum of complex exponentials
+        with known exponents
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+
+        RETURNS
+        -------
+        Signal.periodicBandlimitedSignals
+            object containing the parametric form of the recovered input signals
+        """
+
+        measurement_vector = self.get_measurement_vector(spikes)
+        measurement_operator = self.get_measurement_operator_periodic(spikes)
+
+        recovered_coefficients = (
+            np.linalg.pinv(measurement_operator).dot(measurement_vector)
+        ).reshape((self.n_signals, 2 * self.n_components - 1))
+
+        return Signal.periodicBandlimitedSignals(
+            self.period, self.n_components, recovered_coefficients
+        )
+
+    def _get_PCS_sampler(self, spikes):
+        """
+        gets a matrix which samples piecewise constant signals with discontinuities
+        at the spike times (per channel respectively) using a sinc low pass
+        filter
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+
+        RETURNS
+        -------
+        np.ndarray
+           sampler matrix to be applied on different amplitudes/values of the
+           piecewise constant signal
+        """
+
+        PCSSignal = Signal.piecewiseConstantSignals(
+            spikes.get_spikes(),
+            values=[
+                [0] * (spikes.get_n_spikes_of(ch) - 1) for ch in range(self.n_channels)
+            ],
+        )
+        PCS_sampler_normalizer = np.concatenate(
+            [np.diff(spikes[ch]) for ch in range(self.n_channels)]
+        )
+        return (
+            PCSSignal.get_sampler_matrix(self.sinc_locs, self.Omega)
+            / PCS_sampler_normalizer
+        )
+
+    def _get_sinc_integral_matrix(self, spikes):
+        """
+        matrix that computes the integrals of sincs at the locations
+        self.sinc_locs between any two consecutive spike times of an
+        integrate-and-fire time encoding machine channel
+
+        PARAMETERS
+        ----------
+         spikes: SpikeTimes
+             holds the spike times of the multiple integrate-and-fire
+             time encoding machines encoding the mixed signals
+
+         RETURNS
+         -------
+         np.ndarray
+            sampler matrix to be applied on different amplitudes/values of the
+            sincs at self.sinc_locs
+        """
+
+        def get_integral_bloc(ch, integral_index):
+            spikes_of_ch = spikes[ch]
+            integ_up_limit = spikes_of_ch[integral_index + 1]
+            integ_low_limit = spikes_of_ch[integral_index]
+            return np.atleast_2d(
+                Helpers.sinc_integral(integ_up_limit - self.sinc_locs, self.Omega)
+                - Helpers.sinc_integral(integ_low_limit - self.sinc_locs, self.Omega)
+            )
+
+        return scipy.linalg.block_diag(
+            *[
+                np.concatenate(
+                    [
+                        get_integral_bloc(ch, integral_index)
+                        for integral_index in range(spikes.get_n_spikes_of(ch) - 1)
+                    ]
+                )
+                for ch in range(self.n_channels)
             ]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 0
-            ] = TEM_locations[ch][0]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 1
-            ] = TEM_locations[ch][1]
-            start_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 2
-            ] = spikes_in_ch[:-1]
+        )
 
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 0
-            ] = TEM_locations[ch][0]
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 1
-            ] = TEM_locations[ch][1]
-            end_coordinates[
-                start_index : start_index + n_spikes_in_ch - 1, 2
-            ] = spikes_in_ch[1:]
-            start_index += n_spikes_in_ch - 1
-        return q, start_coordinates, end_coordinates
+    def _flatten_mixing_matrix(self, mixing_matrix):
+        """
+        returns a version of the mixing_matrix parameter which operates on
+        a flattened version of signal coefficients. i.e. the signal coefficients
+        usually have shape num_signals x num_coefficients which are then mixed using
+        the mixing_matrix. The flattened mixing matrix instead operates on a vector
+        of shape num_signals.num_coefficients x 1.
+
+        PARAMETERS
+        ----------
+        mixing_matrix: list or np.ndarray
+            matrix to be flattened
+
+        RETURNS
+        -------
+        np.ndarray
+            flattened mixing matrix that now has mixing_matrix.shape[0] x mixing_matrix.shape[1]
+            rows and as many columns
+        """
+        mixing_matrix = np.array(mixing_matrix)
+
+        return np.concatenate(
+            [
+                np.kron(
+                    mixing_matrix[signal_index, :],
+                    np.eye(1, len(self.sinc_locs), sinc_index),
+                )
+                for signal_index in range(mixing_matrix.shape[0])
+                for sinc_index in range(len(self.sinc_locs))
+            ]
+        )
+
+    def get_measurement_operator_periodic(self, spikes):
+        """
+        Provides the measurement operator that is applied to the complex
+        exponential coefficients when the signal is periodic bandlimited
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding mixed signals
+
+        RETURNS
+        -------
+        np.ndarray
+            matrix containing the measurement operator
+        """
+
+        FS_components = (
+            1j
+            * 2
+            * np.pi
+            / self.period
+            * np.arange(-self.n_components + 1, self.n_components, 1)
+        )
+
+        def get_measurement_operator_bloc(ch):
+            spikes_in_ch = spikes[ch]
+            a_ch = np.atleast_2d(self.mixing_matrix[ch, :])
+            integrals = Helpers.exp_int(
+                FS_components, spikes_in_ch[:-1:], spikes_in_ch[1::]
+            )
+            return np.real(
+                np.transpose(np.multiply.outer(a_ch, integrals), (3, 1, 2, 0)).reshape(
+                    (len(spikes_in_ch) - 1, -1)
+                )
+            )
+
+        return np.concatenate(
+            [get_measurement_operator_bloc(ch) for ch in range(self.n_channels)], axis=0
+        )
+
+    def get_integral_start_end_coordinates(self, spikes, TEM_locations):
+        """
+        returns start ane end coordinates of the integrals that are imposed
+        by the spike times in spikes and using the locations in TEM_locations
+
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding mixed signals
+        TEM_locations: list
+            list of self.n_channel tuples, each of which holds and x- and a y-coordinate
+            representation the direction in space that the time encoding machine
+            is observing
+
+        RETURNS
+        -------
+        np.ndarray
+            Matrix which as many rows as spike time pairs and where each row holds information
+            about the time encoding machine's x coordinate, it's y coordinate and the integral
+            lower limit (start time)
+        np.ndarray
+            Matrix which as many rows as spike time pairs and where each row holds information
+            about the time encoding machine's x coordinate, it's y coordinate and the integral
+            upper limit (end time)
+        """
+        start_coordinates = np.concatenate(
+            [
+                np.atleast_2d(
+                    [TEM_locations[ch][0], TEM_locations[ch][1], spikes[ch][i]]
+                )
+                for ch in range(self.n_channels)
+                for i in range(len(spikes[ch]) - 1)
+            ],
+        )
+        end_coordinates = np.concatenate(
+            [
+                np.atleast_2d(
+                    [TEM_locations[ch][0], TEM_locations[ch][1], spikes[ch][i + 1]]
+                )
+                for ch in range(self.n_channels)
+                for i in range(len(spikes[ch]) - 1)
+            ],
+        )
+        return start_coordinates, end_coordinates
 
 
 class UnknownMixingDecoder(Decoder):
-    def get_matrices_unknown_mixing(
+    """
+    Class for a decoder that can use spike times emitted by multiple
+    integrate-and-fire time encoding machines to reconstruct multiple
+    mixed low-rank signals fed into the multiple machine
+
+    ATTRIBUTES
+    ----------
+    params: TEMParams
+        Object which holds the parameters of the time encoding machines
+    n_channels: int
+        counts the number of channels used to perform the encoding
+    periodic: bool
+        specifies if the decoder aims to recover periodic signals
+    Omega: float
+        bandwidth of nonperiodic signal
+    period: float
+        period of periodic signal
+    n_components: int
+        number of FS components of periodic signal
+    sinc_locs: np.ndarray
+        list of locations of sincs that make up an aperiodic signals
+    """
+
+    def __init__(
         self,
-        spikes,
+        tem_parameters,
         periodic=False,
-        Omega=None,
         sinc_locs=None,
+        Omega=None,
         period=None,
         n_components=None,
     ):
-        assert (not periodic and Omega is not None and sinc_locs is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        """
+        PARAMETERS
+        ----------
+        tem_parameters: TEMParams
+            Object which holds the parameters of the time encoding machines
+        periodic: bool
+            specifies if the decoder aims to recover periodic signals
+        Omega: float
+            bandwidth of nonperiodic signal
+        period: float
+            period of periodic signal
+        n_components: int
+            number of FS components of periodic signal
+        sinc_locs: list or np.ndarray
+            list of locations of sincs that make up an aperiodic signals
+        """
 
-        if periodic:
-            n_unknowns_per_ch = n_components * 2 - 1
+        super().__init__(tem_parameters, periodic, Omega, period, n_components)
+        self.sinc_locs = np.array(sinc_locs)
+
+    def __repr__(self):
+        repr = "Mixed Multi Signal, Multi Channel Decoder object for "
+        if self.periodic:
+            repr += (
+                "periodic bandlimited signals with unknown mixing, with period "
+                + str(self.period)
+                + " and "
+                + str(self.n_components)
+                + " components, "
+            )
         else:
-            n_unknowns_per_ch = len(sinc_locs)
-        n_unknowns = n_unknowns_per_ch * self.n_channels
+            repr += (
+                "sum of sinc signals with unknown mixing, with bandwidth "
+                + str(self.Omega)
+                + " and sincs at locations "
+                + str(self.sinc_locs)
+                + ", "
+            )
+        repr += "with TEM parameters \n" + str(self.params)
+        return repr
 
-        n_spikes = spikes.get_total_num_spikes()
-        n_constraints = n_spikes - self.n_channels
-        q = np.zeros((n_constraints, 1))
-        G = np.zeros((n_constraints, n_unknowns))
+    def get_measurement_matrix(self, spikes):
+        """
+        Provides the measurement operator that is applied to signal coefficients
+        by the spikes of the different time encoding machines
 
-        def Ki(t):
-            if periodic:
-                return Helpers.Di(t, period, n_components)
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding mixed signals
+
+        RETURNS
+        -------
+        np.ndarray
+            matrix containing the measurement operator
+        """
+
+        def component_integral(start, end):
+            if self.periodic:
+                components = np.arange(-self.n_components + 1, self.n_components, 1)
+                return Helpers.dirichlet_component_integral(
+                    end, self.period, components
+                ) - Helpers.dirichlet_component_integral(start, self.period, components)
             else:
-                return Helpers.Si(t, Omega)
+                return Helpers.sinc_integral(
+                    end - self.sinc_locs, self.Omega
+                ) - Helpers.sinc_integral(start - self.sinc_locs, self.Omega)
 
-        start_index_i = 0
-        start_index_j = 0
-        for ch in range(self.n_channels):
-            n_spikes_in_ch = spikes.get_n_spikes_of(ch)
-            spikes_in_ch = spikes.get_spikes_of(ch)
-            spike_diff = spikes_in_ch[1:] - spikes_in_ch[:-1]
-            q[start_index_i : start_index_i + n_spikes_in_ch - 1, 0] = -self.b[ch] * (
-                spike_diff
-            ) + 2 * self.kappa[ch] * (self.delta[ch])
-
-            if not periodic:
-                for sp_i in range(len(spikes_in_ch) - 1):
-                    G[
-                        start_index_i + sp_i,
-                        ch * n_unknowns_per_ch : (ch + 1) * n_unknowns_per_ch,
-                    ] = Ki(spikes_in_ch[sp_i + 1] - sinc_locs) - Ki(
-                        spikes_in_ch[sp_i] - sinc_locs
+        measurement_matrices = [
+            np.concatenate(
+                [
+                    np.atleast_2d(
+                        component_integral(
+                            spikes[ch][sp_i],
+                            spikes[ch][sp_i + 1],
+                        )
                     )
+                    for sp_i in range(spikes.get_n_spikes_of(ch) - 1)
+                ],
+            )
+            for ch in range(self.n_channels)
+        ]
+        return scipy.linalg.block_diag(*measurement_matrices)
 
-            else:
+    def decode(self, spikes, rank, t=None, return_as_param=False):
+        """
+        Method that decodes mixed, low-rank signals from their spike times, by
+        recovering coefficients of the functions that generate them while
+        enforcing low rank constraints
 
-                components = np.arange(-n_components + 1, n_components, 1)
-                for sp_i in range(len(spikes_in_ch) - 1):
-                    G[
-                        start_index_i + sp_i,
-                        ch * n_unknowns_per_ch : (ch + 1) * n_unknowns_per_ch,
-                    ] = [
-                        Helpers.Di2(spikes_in_ch[sp_i + 1], period, component)
-                        - Helpers.Di2(spikes_in_ch[sp_i], period, component)
-                        for component in components
-                    ]
+        PARAMETERS
+        ----------
+        spikes: SpikeTimes
+            holds the spike times of the multiple integrate-and-fire
+            time encoding machines encoding the mixed signals
+        t: np.ndarray
+            vector holding the times at which one would like the recovered signal
+            to be sampled
+        return_as_param: bool
+           specifies if the input signal should be returned in its parametric form
+           (True) or sampled at t (False)
 
-            start_index_i += n_spikes_in_ch - 1
-        return q, G
-
-    def decode(
-        self,
-        spikes,
-        t,
-        rank,
-        periodic=False,
-        sinc_locs=None,
-        Omega=None,
-        period=None,
-        n_components=None,
-    ):
-        self.__dict__.update(self.params.__dict__)
-
-        assert (not periodic and Omega is not None and sinc_locs is not None) or (
-            periodic and (period is not None) and (n_components is not None)
-        ), "the type of signal is not consistent with the parameters given"
+        RETURNS
+        -------
+        np.ndarray or Signal.SignalCollection
+            vector containing input signals sampled at times t or parametric form
+            of input signals
+        """
 
         shape = (
             self.n_channels,
-            len(sinc_locs) if not periodic else 2 * n_components - 1,
+            len(self.sinc_locs) if not self.periodic else 2 * self.n_components - 1,
         )
-
-        q, G = self.get_matrices_unknown_mixing(
-            spikes,
-            periodic=periodic,
-            Omega=Omega,
-            sinc_locs=sinc_locs,
-            period=period,
-            n_components=n_components,
-        )
-
-        q = np.atleast_2d(q.T)
-
+        G = self.get_measurement_matrix(spikes)
+        q = self.get_measurement_vector(spikes)
         G_inv = np.linalg.pinv(G)
-        G_inv = G.T.dot(np.linalg.pinv(G.dot(G.T)))
         C_y = Helpers.singular_value_projection_w_matrix(
             shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-3, lr=0.5
         )
 
-        if not periodic:
-            y_param = Signal.bandlimitedSignals(Omega, sinc_locs, sinc_amps=C_y)
+        if not self.periodic:
+            y_param = Signal.bandlimitedSignals(
+                self.Omega, self.sinc_locs, sinc_amps=C_y
+            )
         else:
-            y_param = Signal.periodicBandlimitedSignals(period, n_components, C_y)
-        return y_param.sample(t)
+            y_param = Signal.periodicBandlimitedSignals(
+                self.period, self.n_components, C_y
+            )
+        return y_param if return_as_param else y_param.sample(t)

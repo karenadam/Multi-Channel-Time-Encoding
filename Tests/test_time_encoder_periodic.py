@@ -2,19 +2,9 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
-from src import *
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import TEMParams
-# from Encoder import DiscreteEncoder, ContinuousEncoder
-# from Decoder import SSignalMChannelDecoder, MSignalMChannelDecoder
+from src import *
 
 
 class TestTimeEncoderPeriodicWithStructure:
@@ -60,15 +50,20 @@ class TestTimeEncoderPeriodicWithStructure:
         period = 3
         n_components = 2
 
-        spikes = spikeTimes(n_channels=1)
+        spikes = SpikeTimes(n_channels=1)
         spikes.add(0, [0.5, 2, 2.5, 3])
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        q, G = Decoder.SSignalMChannelDecoder(tem_params).get_closed_form_matrices(
-            spikes, periodic=True, period=period, n_components=n_components
+        q = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=True, period=period, n_components=n_components
+        ).get_measurement_vector(spikes)
+        G = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=True, period=period, n_components=n_components
+        ).get_measurement_operator(
+            spikes,
         )
         target_q = [0.5, 1.5, 1.5]
-        assert np.linalg.norm(q - target_q) < 1e-6
+        assert np.allclose(q, target_q)
 
     def test_ss_sc_bl_decoding(self):
         kappa = 1
@@ -89,11 +84,11 @@ class TestTimeEncoderPeriodicWithStructure:
         spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
-        spikes = spikeTimes(n_channels=1)
+        spikes = SpikeTimes(n_channels=1)
 
-        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
-            spikes_single, time, periodic=True, period=period, n_components=n_components
-        )
+        rec_single = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=True, period=period, n_components=n_components
+        ).decode(spikes_single, time)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
@@ -122,10 +117,13 @@ class TestTimeEncoderPeriodicWithStructure:
         spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
-        spikes = spikeTimes(n_channels=1)
+        spikes = SpikeTimes(n_channels=1)
 
-        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
-            spikes_single, time, periodic=True, period=period, n_components=n_components
+        rec_single = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=True, period=period, n_components=n_components
+        ).decode(
+            spikes_single,
+            time,
         )
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
@@ -156,9 +154,9 @@ class TestTimeEncoderPeriodicWithStructure:
         spikes = Encoder.ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
-        rec = Decoder.MSignalMChannelDecoder(tem_params).decode_periodic(
-            spikes, time, periodic=True, period=period, n_components=n_components
-        )
+        rec = Decoder.MSignalMChannelDecoder(
+            tem_params, periodic=True, period=period, n_components=n_components
+        ).decode(spikes, time)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
@@ -171,7 +169,7 @@ class TestTimeEncoderPeriodicWithStructure:
 
 class TestTimeEncoderBandlimitedPeriodicWithStructure:
     def test_multi_signal_multi_channel_bandlimited_period_one_shot_reconstruction_using_old_rec_alg(
-        self
+        self,
     ):
         kappa = [0.25, 0.5, 0.5]
         delta = [1, 1, 1]
@@ -206,8 +204,11 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
         spikes_0 = spikes_single_precise.get_spikes_of(0)
         sinc_locs = (spikes_0[:-1] + spikes_0[1:]) / 2
 
-        rec_single = Decoder.MSignalMChannelDecoder(tem_params).decode(
-            spikes_single_precise, time, sinc_locs, 2 * np.pi / period, delta_t
+        rec_single = Decoder.MSignalMChannelDecoder(
+            tem_params, periodic=False, sinc_locs=sinc_locs, Omega=2 * np.pi / period
+        ).decode(
+            spikes_single_precise,
+            time,
         )
 
         # rec_single = tem_single.decode_periodic(spikes_single_precise, time, period, n_components, delta_t)
@@ -221,7 +222,7 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
         )
 
     def test_1Dspace_BL_signal_multi_channel_bandlimited_period_one_shot_reconstruction_using_old_rec_alg(
-        self
+        self,
     ):
         kappa = [0.25, 0.5, 0.5, 1]
         delta = [1, 1, 1, 1]
@@ -265,8 +266,11 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
         spikes_0 = spikes_single_precise.get_spikes_of(0)
         sinc_locs = (spikes_0[:-1] + spikes_0[1:]) / 2
 
-        rec_single = Decoder.MSignalMChannelDecoder(tem_params).decode(
-            spikes_single_precise, time, sinc_locs, 2 * np.pi / period, delta_t
+        rec_single = Decoder.MSignalMChannelDecoder(
+            tem_params, periodic=False, sinc_locs=sinc_locs, Omega=2 * np.pi / period
+        ).decode(
+            spikes_single_precise,
+            time,
         )
 
         start_index = int(len(y) / 10)

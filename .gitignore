@@ -5,3 +5,4 @@ Venv/
 Simulations/
 *.png
 Source/SVT/
+.idea/

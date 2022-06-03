@@ -5,17 +5,6 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import *
-# from Encoder import DiscreteEncoder
-# from Decoder import UnknownMixingDecoder
-
 
 class TestTimeEncoderMultiSignalMultiChannel:
     def test_can_reconstruct_standard_encoding_with_4_by_2_mixing_sinc(self):
@@ -46,8 +35,12 @@ class TestTimeEncoderMultiSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=25, delta_t=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(tem_params).decode(
-            spikes_mult, t, 2, sinc_locs=original1.get_sinc_locs(), Omega=omega
+        rec_mult = Decoder.UnknownMixingDecoder(
+            tem_params, sinc_locs=original1.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            2,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -94,7 +87,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         original = Signal.periodicBandlimitedSignals(period)
         original.add(original1)
         original.add(original2)
-        y = np.zeros((2, len(t)))
+        y = np.zeros((2, len(t)), dtype="complex")
         y[0, :] = original1.sample(t)
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
@@ -104,9 +97,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=25, delta_t=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(tem_params).decode(
-            spikes_mult, t, 2, periodic=True, n_components=n_components, period=period
-        )
+        rec_mult = Decoder.UnknownMixingDecoder(
+            tem_params, periodic=True, n_components=n_components, period=period
+        ).decode(spikes_mult, 2, t)
 
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)

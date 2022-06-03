@@ -5,17 +5,6 @@ import numpy as np
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import *
-# from Encoder import *
-# from Decoder import *
-
 
 class TestTimeEncoderSingleSignalSingleChannel:
     def test_time_encoder_creator(self):
@@ -44,14 +33,14 @@ class TestTimeEncoderSingleSignalSingleChannel:
         spikes_single = Encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=15, delta_t=delta_t
         )
-        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
-            spikes_single, t, periodic=False, Omega=omega
-        )
+        rec_single = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=False, Omega=omega
+        ).decode(spikes_single, t)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
         assert (
-            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
 
@@ -72,13 +61,18 @@ class TestTimeEncoderSingleSignalSingleChannel:
 
         encoder = Encoder.DiscreteEncoder(tem_params)
         spikes_single = encoder.encode(original, signal_end_time=15, delta_t=delta_t)
-        decoder = Decoder.SSignalMChannelDecoder(tem_params)
-        rec_single = decoder.decode(spikes_single, t, periodic=False, Omega=omega)
+        decoder = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=False, Omega=omega
+        )
+        rec_single = decoder.decode(
+            spikes_single,
+            t,
+        )
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
         assert (
-            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
 
@@ -101,12 +95,15 @@ class TestTimeEncoderSingleSignalSingleChannel:
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
         spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
-        rec_single = Decoder.SSignalMChannelDecoder(tem_params).decode(
-            spikes_single, t, periodic=False, Omega=omega
+        rec_single = Decoder.SSignalMChannelDecoder(
+            tem_params, periodic=False, Omega=omega
+        ).decode(
+            spikes_single,
+            t,
         )
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
         assert (
-            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )

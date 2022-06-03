@@ -2,22 +2,50 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
-
-# from Signals import (
-#     bandlimitedSignal,
-#     bandlimitedSignals,
-#     periodicBandlimitedSignal,
-#     periodicBandlimitedSignals,
-# )
-# from Spike_Times import spikeTimes
-# from TEMParams import *
-# from Encoder import *
-# from Decoder import *
 
 
 class TestTimeEncoderSingleSignalMultiChannel:
+    def test_tem_params_repr(self):
+        kappa = [4, 3.2, 2.8, 3]
+        delta = [0.8, 1.2, 0.6, 1]
+        b = 1
+        int_shift = max(delta) / 2
+
+        omega = np.pi
+        delta_t = 1e-4
+        t = np.arange(0, 20, delta_t)
+        np.random.seed(10)
+        original = Signal.bandlimitedSignal(omega)
+        original.random(t)
+        y = original.sample(t)
+        b = np.max(np.abs(y)) + 1
+
+        tem_mult = TEMParams(
+            kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=[int_shift]
+        )
+        spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
+            original, signal_end_time=20, delta_t=delta_t
+        )
+        print(tem_mult)
+        print(spikes_mult)
+        print(spikes_mult.__repr__())
+
+    def test_tem_params_throws_error_when_mismatch_in_params(self):
+        kappa = [4, 3.2, 2.8, 3]
+        delta = [0.8, 1.2, 0.6]
+        b = 1
+        int_shift = max(delta) / 2
+
+        try:
+            tem_mult = TEMParams(
+                kappa, delta, b, mixing_matrix=[[1]] * 4, integrator_init=[int_shift]
+            )
+        except:
+            return
+        assert False
+
     def test_can_reconstruct_standard_encoding_ex1(self):
         kappa = [4, 3.2, 2.8, 3]
         delta = [0.8, 1.2, 0.6, 1]
@@ -38,13 +66,13 @@ class TestTimeEncoderSingleSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
             original, signal_end_time=20, delta_t=delta_t
         )
-        rec_mult = Decoder.SSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, periodic=False, Omega=omega
-        )
+        rec_mult = Decoder.SSignalMChannelDecoder(
+            tem_mult, periodic=False, Omega=omega
+        ).decode(spikes_mult, t)
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
         assert (
-            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
 
@@ -68,13 +96,17 @@ class TestTimeEncoderSingleSignalMultiChannel:
         spikes_mult = Encoder.DiscreteEncoder(tem_mult).encode(
             original, signal_end_time=20, delta_t=delta_t
         )
-        rec_mult = Decoder.SSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, periodic=False, Omega=omega
+        print(spikes_mult)
+        rec_mult = Decoder.SSignalMChannelDecoder(
+            tem_mult, periodic=False, Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
         assert (
-            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y ** 2)
+            np.mean(((rec_mult - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 2e-3
         )
 
@@ -127,8 +159,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -162,8 +197,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
@@ -198,8 +236,11 @@ class TestTimeEncoderSingleSignalMultiChannel:
 
         tem_mult = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
         spikes_mult = Encoder.ContinuousEncoder(tem_mult).encode(signal, t[-1])
-        rec_mult = Decoder.MSignalMChannelDecoder(tem_mult).decode(
-            spikes_mult, t, original.get_sinc_locs(), omega, delta_t
+        rec_mult = Decoder.MSignalMChannelDecoder(
+            tem_mult, periodic=False, sinc_locs=original.get_sinc_locs(), Omega=omega
+        ).decode(
+            spikes_mult,
+            t,
         )
 
         start_index = int(y.shape[1] / 10)
