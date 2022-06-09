@@ -3,6 +3,6 @@ __pycache__
 *.pytest_cache
 Venv/
 Simulations/
-*.png
 Source/SVT/
 .idea/
+.ipynb_checkpoints/
