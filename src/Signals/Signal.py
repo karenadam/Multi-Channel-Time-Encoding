@@ -135,10 +135,8 @@ class bandlimitedSignal(Signal):
         self.sinc_amps = sinc_amps if sinc_amps is not None else []
 
     def random(self, t, padding=0):
-        delta_t = t[1] - t[0]
         T = np.pi / self.Omega
-        samples_per_period = int(T / delta_t)
-        n_sincs = int(len(t) / samples_per_period)
+        n_sincs = int(t[-1]/T)
         self.n_sincs = n_sincs
         self.sinc_locs = [(T * (n + padding)) for n in range(n_sincs - 2 * padding)]
         self.sinc_amps = [np.random.uniform(0, 1) for n in range(n_sincs - 2 * padding)]
@@ -187,7 +185,6 @@ class bandlimitedSignal(Signal):
 
 class bandlimitedSignals(SignalCollection):
     def __init__(self, Omega, sinc_locs=None, sinc_amps=None, padding=0):
-
         self.n_signals = len(sinc_amps) if sinc_amps is not None else 0
         self.signals = [
             bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])

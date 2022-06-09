@@ -68,6 +68,7 @@ class DiscreteEncoder(Encoder):
             output of integrator throughout the encoding scheme if the
             with_integrator_probe option is turned on
         """
+
         self.__dict__.update(self.params.__dict__)
 
         spikes = SpikeTimes(self.n_channels)
@@ -114,18 +115,18 @@ class DiscreteEncoder(Encoder):
         spike_locations = []
         spike_times = []
         input_to_ch = input_signal[ch, :]
-        run_sum = np.cumsum(delta_t * (input_to_ch + self.b[ch])) / self.kappa[ch]
-        thresh = self.delta[ch] - self.integrator_init[ch]
+        run_sum = np.cumsum(delta_t * (input_to_ch + self._b[ch])) / self._kappa[ch]
+        thresh = self._delta[ch] - self._integrator_init[ch]
         nextpos = bisect.bisect_left(run_sum, thresh)
         while nextpos != len(input_to_ch):
             spike_locations.append(nextpos)
             spike_times.append(float(nextpos * delta_t))
-            thresh = thresh + 2 * self.delta[ch]
+            thresh = thresh + 2 * self._delta[ch]
             nextpos = bisect.bisect_left(run_sum, thresh)
         if self.with_integral_probe:
-            run_sum += self.integrator_init[ch]
+            run_sum += self._integrator_init[ch]
             for spike_loc in spike_locations:
-                run_sum[spike_loc:] -= 2 * self.delta[ch]
+                run_sum[spike_loc:] -= 2 * self._delta[ch]
         return spike_times, run_sum
 
 
@@ -187,16 +188,16 @@ class ContinuousEncoder(Encoder):
         while z[-1] < signal_end_time:
             si = (
                 signal.get_precise_integral(z[-1], current_int_end)
-                + (current_int_end - z[-1]) * self.b[ch]
-            ) / self.kappa[ch]
+                + (current_int_end - z[-1]) * self._b[ch]
+            ) / self._kappa[ch]
             if len(z) == 1:
-                si = si + (self.integrator_init[ch] + self.delta[ch])
+                si = si + (self._integrator_init[ch] + self._delta[ch])
             if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
                 z.append(current_int_end)
                 low_int_bound = current_int_end
                 upp_int_bound = signal_end_time
                 current_int_end = signal_end_time
-            elif si > 2 * self.delta[ch]:
+            elif si > 2 * self._delta[ch]:
                 upp_int_bound = current_int_end
                 current_int_end = (low_int_bound + current_int_end) / 2
             else:
@@ -204,8 +205,8 @@ class ContinuousEncoder(Encoder):
                 current_int_end = (current_int_end + upp_int_bound) / 2
             if (
                 signal.get_precise_integral(z[-1], signal_end_time)
-                + (signal_end_time - z[-1]) * self.b[ch]
-            ) / self.kappa[ch] < 2 * self.delta[ch]:
+                + (signal_end_time - z[-1]) * self._b[ch]
+            ) / self._kappa[ch] < 2 * self._delta[ch]:
                 break
             prvs_integral = si
 

@@ -939,7 +939,7 @@ class UnknownMixingDecoder(Decoder):
         q = self.get_measurement_vector(spikes)
         G_inv = np.linalg.pinv(G)
         C_y = Helpers.singular_value_projection_w_matrix(
-            shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-3, lr=0.5
+            shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-5, lr=0.5
         )
 
         if not self.periodic:

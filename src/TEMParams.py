@@ -58,13 +58,42 @@ class TEMParams(object):
         self.mixing_matrix = np.atleast_2d(np.array(mixing_matrix))
         self.n_signals = self.mixing_matrix.shape[1]
         self.n_channels = self.mixing_matrix.shape[0]
-        self.kappa = self.check_dimensions(kappa)
-        self.delta = self.check_dimensions(delta)
+        self._kappa = self._check_dimensions(kappa)
+        self._delta = self._check_dimensions(delta)
         if len(integrator_init) > 0:
-            self.integrator_init = self.check_dimensions(integrator_init)
+            self._integrator_init = self._check_dimensions(integrator_init)
         else:
-            self.integrator_init = [-self.delta[l] for l in range(self.n_channels)]
-        self.b = self.check_dimensions(b)
+            self._integrator_init = [-self.delta[l] for l in range(self.n_channels)]
+        self._b = self._check_dimensions(b)
+
+    def getKappa(self):
+        return self._kappa
+
+    def setKappa(self, kappa):
+        self._kappa = self._check_dimensions(kappa)
+
+    def getDelta(self):
+        return self._delta
+
+    def setDelta(self, delta):
+        self._delta = self._check_dimensions(delta)
+
+    def getB(self):
+        return self._b
+
+    def setB(self, b):
+        self._b = self._check_dimensions(b)
+
+    def getIntegratorInit(self):
+        return self._integrator_init
+
+    def setIntegratorInit(self, integrator_init):
+        self._integrator_init = self._check_dimensions(integrator_init)
+
+    kappa = property(getKappa, setKappa)
+    delta = property(getDelta, setDelta)
+    integrator_init = property(getIntegratorInit, setIntegratorInit)
+    b = property(getB, setB)
 
     def __repr__(self):
         return (
@@ -84,7 +113,7 @@ class TEMParams(object):
             + str(self.integrator_init)
         )
 
-    def check_dimensions(self, parameter):
+    def _check_dimensions(self, parameter):
         """
         Verifies that parameter has as many entries at the number
         of channels
