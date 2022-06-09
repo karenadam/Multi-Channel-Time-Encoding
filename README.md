@@ -2,6 +2,18 @@
 
 This repository contains code to sample and reconstruct bandlimited signals using time encoding machines that use a perfect integrate-and-fire paradigm.
 
+# Basic usage
+Create a python environment using your favorite way, and install the packages listed in requirements.txt, for example using:
+```
+pip install -r requirements.txt
+```
+The tests can be run by calling
+```
+pytest
+```
+and include some working examples.
+More working examples can be found in the paper-specific repositories listed below.
+
 # Publications
 
 ## Sampling and Reconstruction of Bandlimited Signals with Multi-Channel Time Encoding
