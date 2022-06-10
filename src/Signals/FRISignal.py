@@ -1,8 +1,10 @@
 from src import *
+
+# import Signals
 from typing import Union
 
 
-class FRISignal(Signal.Signal):
+class FRISignal(object):
     def __init__(
         self, dirac_locations: np.array, dirac_weights: np.array, period: float
     ):

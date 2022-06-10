@@ -17,12 +17,18 @@ class TestTimeEncoderMultiSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original1 = Signal.bandlimitedSignal(omega)
-        original1.random(t)
+        original1 = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        # original1.random(t)
         np.random.seed(11)
-        original2 = Signal.bandlimitedSignal(omega)
-        original2.random(t)
-        original = Signal.bandlimitedSignals(omega)
+        original2 = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        # original2.random(t)
+        original = SignalCollection.bandlimitedSignals(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
         original.add(original1)
         original.add(original2)
         y = np.zeros((2, len(t)))
@@ -84,7 +90,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         original2 = Signal.periodicBandlimitedSignal(
             period, n_components, np.random.random(size=(n_components)).tolist()
         )
-        original = Signal.periodicBandlimitedSignals(period)
+        original = SignalCollection.periodicBandlimitedSignals(period)
         original.add(original1)
         original.add(original2)
         y = np.zeros((2, len(t)), dtype="complex")

@@ -25,8 +25,8 @@ class TestBandlimitedSignal:
         signal = Signal.bandlimitedSignal(Omega, sinc_locs, sinc_amps)
         t_int_0 = np.arange(2, 7, 0.01)
         t_int_1 = np.arange(4, 8, 0.01)
-        discrete_integral_0 = signal.get_total_integral(t_int_0)
-        discrete_integral_1 = signal.get_total_integral(t_int_1)
+        discrete_integral_0 = np.sum(signal.sample(t_int_0)) * 0.01
+        discrete_integral_1 = np.sum(signal.sample(t_int_1)) * 0.01
         precise_integral = signal.get_precise_integral([2, 4], [7, 8])
 
         assert (
@@ -44,7 +44,7 @@ class TestBandlimitedSignals:
         sinc_locs = [1, 2, 3]
         sinc_amps = [[1, 0, 1], [1, 1, 0]]
         omega = np.pi
-        signals = Signal.bandlimitedSignals(omega, sinc_locs, sinc_amps)
+        signals = SignalCollection.bandlimitedSignals(omega, sinc_locs, sinc_amps)
         mixed_amplitudes = signals.mix_amplitudes([[2, 1], [1, 0]])
         expected_amplitudes = [3, 1, 2, 1, 0, 1]
 
@@ -85,16 +85,16 @@ class TestPiecewiseConstantSignals:
     def test_creation(self):
         discontinuities = [[1, 2], [1.5, 4]]
         values = [[1], [-2]]
-        signals = Signal.piecewiseConstantSignals(discontinuities, values)
-        signal_1 = signals.get_signal(1)
-        assert signal_1.get_discontinuities() == [1.5, 4]
-        assert signal_1.get_values() == [-2]
+        signals = SignalCollection.piecewiseConstantSignals(discontinuities, values)
+        signal_1 = signals[1]
+        assert signal_1.discontinuities == [1.5, 4]
+        assert signal_1.values == [-2]
 
     def test_sampling(self):
         discontinuities = [[1, 2, 4, 6, 7, 8], [1.5, 4, 7, 9, 10]]
         values = [[1, 3, 4, -2, 3], [-2, 1, 3, -1]]
-        signals = Signal.piecewiseConstantSignals(discontinuities, values)
-        signal_1 = signals.get_signal(1)
+        signals = SignalCollection.piecewiseConstantSignals(discontinuities, values)
+        signal_1 = signals[1]
 
         sample_locs = [0, 1.5, 3]
         samples_1_matrix_approach = signals.sample(sample_locs, np.pi)[3:].T
@@ -134,7 +134,7 @@ class TestBandlimitedPeriodicSignals:
         omega = np.pi
         try:
             signal = Signal.periodicBandlimitedSignal(1 / omega, 3, [1, 2])
-        except AssertionError:
+        except:
             return
         assert False
 
@@ -400,7 +400,7 @@ class TestMultiDimPeriodicSignal:
 
         num_spikes = 8
 
-        signals = Signal.periodicBandlimitedSignals(period=video.periods[-1])
+        signals = SignalCollection.periodicBandlimitedSignals(period=video.periods[-1])
         deltas = []
 
         for TEM_l in TEM_locations:
