@@ -114,11 +114,15 @@ class periodicBandlimitedSignals(SignalCollection):
             signal to be added to collection
         """
         if signal.period != self.period:
-            raise ValueError("The period of the signal you are adding does not match the period of the collection")
+            raise ValueError(
+                "The period of the signal you are adding does not match the period of the collection"
+            )
         if len(self._signals) == 0:
             self._n_components = signal._n_components
         elif self._n_components != signal._n_components:
-            raise ValueError("The number of components of the signal you are adding does not match that of the collection")
+            raise ValueError(
+                "The number of components of the signal you are adding does not match that of the collection"
+            )
         self._coefficient_values.append(signal.coefficients)
         super().add(signal)
 
@@ -145,6 +149,7 @@ class periodicBandlimitedSignals(SignalCollection):
         return self._coefficient_values
 
     coefficient_values = property(get_coefficients)
+
 
 class bandlimitedSignals(SignalCollection):
     """
@@ -192,13 +197,15 @@ class bandlimitedSignals(SignalCollection):
             signal to be added to collection
         """
         if signal.Omega != self._omega:
-            raise ValueError("The bandwidth of the signal you are adding does not match the bandwidth of the collection")
+            raise ValueError(
+                "The bandwidth of the signal you are adding does not match the bandwidth of the collection"
+            )
         if len(self._signals) == 0:
             self._sinc_locs = copy.deepcopy(signal.get_sinc_locs())
         elif not np.allclose(signal.get_sinc_locs(), self._sinc_locs):
-                raise ValueError(
-                    "Locations of sincs of added signal do not match that of collection"
-                )
+            raise ValueError(
+                "Locations of sincs of added signal do not match that of collection"
+            )
         self._sinc_amps.append(signal.get_sinc_amps().tolist())
         super().add(signal)
 
@@ -262,6 +269,7 @@ class piecewiseConstantSignals(SignalCollection):
     _signals: list
         list of piecewiseConstantSignal objects
     """
+
     def __init__(self, discontinuities=[[]], values=[[]]):
         self._discontinuities = discontinuities
         self._values = values
@@ -322,6 +330,7 @@ class piecewiseConstantSignals(SignalCollection):
             array where each row obtains a sample of one of the signals at one of the
             sample locations (when applied to the flattened values)
         """
+
         def multiplier_vector(sample_loc, signal_index):
             low_limit = np.array(self.discontinuities[signal_index][:-1])
             up_limit = np.array(self.discontinuities[signal_index][1:])

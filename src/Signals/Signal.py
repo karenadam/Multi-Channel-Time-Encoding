@@ -3,6 +3,7 @@ from src import *
 
 class Signal(object):
     """Parametric representation of a signal"""
+
     def __init__(self):
         return
 
@@ -11,7 +12,7 @@ class Signal(object):
 
 
 class periodicBandlimitedSignal(Signal):
-    """ periodic bandlimited signal which is described using complex exponentials and
+    """periodic bandlimited signal which is described using complex exponentials and
     their corresponding parameters
 
     ATTRIBUTES
@@ -68,7 +69,6 @@ class periodicBandlimitedSignal(Signal):
         else:
             extended_coefficients = values
         self._coefficients = extended_coefficients
-
 
     def get_coefficients(self):
         """
@@ -255,11 +255,13 @@ class piecewiseConstantSignal(Signal):
             values the signal takes between pairs of successive discontinuities
         """
         if len(discontinuities) != len(values) + 1:
-            raise ValueError("The number of discontinuities does not match the number of signal levels")
+            raise ValueError(
+                "The number of discontinuities does not match the number of signal levels"
+            )
         self._discontinuities = discontinuities
         self._values = values
 
-    def sample(self,t):
+    def sample(self, t):
         """
         PARAMETERS
         ----------
@@ -274,8 +276,10 @@ class piecewiseConstantSignal(Signal):
 
         samples = np.zeros_like(t)
         for l in range(len(self.values)):
-            indicator = (np.array(t)>(self.discontinuities[l]))*(np.array(t)<(self.discontinuities[l+1]))
-            samples+=self.values[l]*indicator
+            indicator = (np.array(t) > (self.discontinuities[l])) * (
+                np.array(t) < (self.discontinuities[l + 1])
+            )
+            samples += self.values[l] * indicator
         return samples
 
     def low_pass_filter(self, omega):
@@ -301,6 +305,7 @@ class piecewiseConstantSignal(Signal):
     discontinuities = property(get_discontinuities)
     values = property(get_values)
 
+
 class lPFedPCSSignal(Signal):
     """
     (1-dimensional) low pass filtered piecewise constant signal defined by a set of
@@ -316,6 +321,7 @@ class lPFedPCSSignal(Signal):
     omega: float
         bandwidth of sinc used to low pass filter the signal
     """
+
     def __init__(self, discontinuities, values, omega):
         self._discontinuities = discontinuities
         self._values = values
