@@ -10,7 +10,7 @@ def get_f_s_coeffs_from_time_encoded_video(
     video, TEM_locations, rank=10, num_spikes=None, plot=False
 ):
 
-    signals = Signal.periodicBandlimitedSignals(period=video.periods[-1])
+    signals = SignalCollection.periodicBandlimitedSignals(period=video.periods[-1])
     deltas = []
     if num_spikes is None:
         num_spikes = video.periods[-1] + 8.5

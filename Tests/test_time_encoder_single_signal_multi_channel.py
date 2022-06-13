@@ -17,8 +17,9 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 20, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 20, np.pi / omega)
+        )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
@@ -55,8 +56,9 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 20, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 20, np.pi / omega)
+        )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
@@ -85,8 +87,9 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 20, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 20, np.pi / omega)
+        )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1.1
 
@@ -149,9 +152,10 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t, padding=2)
-        signal = Signal.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(2, 23, np.pi / omega)
+        )
+        signal = SignalCollection.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
         signal.add(original)
         y = original.sample(t)
         y = np.atleast_2d(y)
@@ -187,9 +191,10 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t, padding=2)
-        signal = Signal.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(2, 23, np.pi / omega)
+        )
+        signal = SignalCollection.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
         signal.add(original)
         y = original.sample(t)
         y = np.atleast_2d(y)
@@ -226,9 +231,10 @@ class TestTimeEncoderSingleSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t, padding=2)
-        signal = Signal.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(2, 23, np.pi / omega)
+        )
+        signal = SignalCollection.bandlimitedSignals(np.pi, sinc_locs=[], sinc_amps=[])
         signal.add(original)
         y = original.sample(t)
         y = np.atleast_2d(y)

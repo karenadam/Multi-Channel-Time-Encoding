@@ -1,17 +1,39 @@
 from src import *
+
+# import Signals
 from typing import Union
 
 
-class FRISignal(Signal.Signal):
+class FRISignal(object):
+    """
+    periodic finite rate of innovation signals made of a sum of diracs
+
+    ATTRIBUTES
+    ----------
+    _num_diracs: int
+        number of diracs in signal
+    _dirac_locations: list
+        list of floats representing locations of diracs
+    _dirac_weights: list
+        list of floats representing weights of diracs
+    _period: float
+        period of signal
+    """
+
     def __init__(
         self, dirac_locations: np.array, dirac_weights: np.array, period: float
     ):
-        assert (
-            len(dirac_locations.shape) == 1 and len(dirac_weights.shape) == 1
-        ), "the dirac locations and weights should be one dimensional arrays"
-        assert len(dirac_locations) == len(
-            dirac_weights
-        ), "You have a mismatch between numbers of dirac locations and weights"
+        """
+        Parameters
+        ----------
+        dirac_locations: list or np.ndarray
+            list of floats representing locations of diracs
+        dirac_weights: list
+            list of floats representing weights of diracs
+        period: float
+            period of signal
+        """
+
         self._num_diracs = len(dirac_locations)
         self._dirac_locations = np.atleast_2d(copy.deepcopy(dirac_locations))
         self._dirac_weights = np.atleast_2d(copy.deepcopy(dirac_weights))
@@ -19,12 +41,18 @@ class FRISignal(Signal.Signal):
         return
 
     def get_fourier_series(self, m: np.array):
-        if len(m.shape) == 2:
-            assert m.shape[1] == 1  # is column vector
-        elif len(m.shape) == 1:
-            m = np.atleast_2d(m).T
-        else:
-            assert False, "m does not have the right dimensions"
+        """
+        Parameters
+        ----------
+        m: np.ndarray
+            indices of desired fourier series coefficients
+
+        Returns
+        -------
+        np.ndarray
+            fourier series coefficients of indices m
+        """
+        m = np.reshape(m, (-1, 1))
         c_k_m = self._dirac_weights * np.exp(
             -1j * 2 * np.pi * m * self._dirac_locations / self._period
         )
@@ -34,14 +62,12 @@ class FRISignal(Signal.Signal):
 
 class AnnihilatingFilter(object):
     def check_coefficient_shape_and_structure(self, f_s_coefficients: np.array):
-        assert len(f_s_coefficients.shape) <= 2
         if len(f_s_coefficients.shape) == 1:
             f_s_coefficients = np.reshape(
                 f_s_coefficients, (1, f_s_coefficients.shape[0])
             )
-        assert np.allclose(
-            f_s_coefficients, f_s_coefficients[:, ::-1].conj()
-        )  # Assumes signal is real and checks that coefficients are conj symmetric
+        if not np.allclose(f_s_coefficients, f_s_coefficients[:, ::-1].conj()):
+            raise ValueError("Coefficients provided are not conjugate symmetric")
         return f_s_coefficients
 
     def __init__(self, f_s_coefficients: np.array, filter_length: int = 1):
@@ -70,7 +96,6 @@ class AnnihilatingFilter(object):
                 - 1,
             ] = f_s_coefficients[:, :]
 
-        num_rotations = num_available_fs_coeffs - 1
         num_rotations = self._num_taps - 2
 
         operator = np.zeros(

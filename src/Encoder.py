@@ -73,7 +73,7 @@ class DiscreteEncoder(Encoder):
 
         spikes = SpikeTimes(self.n_channels)
         if isinstance(signal, Signal.Signal) or isinstance(
-            signal, Signal.SignalCollection
+            signal, SignalCollection.SignalCollection
         ):
             sampled = signal.sample(np.arange(0, signal_end_time, delta_t))
         else:
@@ -248,7 +248,7 @@ class ContinuousEncoder(Encoder):
         y_param = x_param.get_mixed_signals(self.mixing_matrix)
         spikes = SpikeTimes(self.n_channels)
         for ch in range(self.n_channels):
-            signal = y_param.get_signal(ch)
+            signal = y_param[ch]
             spikes_of_ch = self.encode_single_channel_precise(
                 signal,
                 signal_end_time,

@@ -94,7 +94,7 @@ class Layer(object):
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
     def get_ex_measurement_pairs(
-        self, input: Signal.SignalCollection, spike_times: SpikeTimes
+        self, input: Signals.SignalCollection, spike_times: SpikeTimes
     ):
         """
         returns the measurement matrix and vector corresponding to the weight matrix of
@@ -102,7 +102,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signal.SignalCollection
+        input: Signals.SignalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -184,7 +184,7 @@ class Layer(object):
         ].reshape((self.num_outputs, self.num_inputs))
 
     def learn_weight_matrix_from_one_ex(
-        self, input: Signal.SignalCollection, spike_times: Spike_Times
+        self, input: Signals.SignalCollection, spike_times: Spike_Times
     ):
         """
         learns the weight matrix that solves (in the least-squares sense) for the
@@ -192,7 +192,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signal.SignalCollection
+        input: Signals.SignalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -223,7 +223,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signal.SignalCollection objects, input to the layer in the different examples
+            list of Signals.SignalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -278,7 +278,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signal.SignalCollection objects, input to the layer in the different examples
+            list of Signals.SignalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 

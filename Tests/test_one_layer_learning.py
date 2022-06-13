@@ -18,7 +18,7 @@ class TestLearningWorksOneSignal:
         original2 = Signal.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
-        signals = Signal.periodicBandlimitedSignals(10)
+        signals = SignalCollection.periodicBandlimitedSignals(10)
         signals.add(original1)
         signals.add(original2)
         A = [[0.9, 0.1], [0.2, 0.8]]
@@ -44,7 +44,7 @@ class TestLearningWorksOneSignal:
         original2 = Signal.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
-        signals = Signal.periodicBandlimitedSignals(10)
+        signals = SignalCollection.periodicBandlimitedSignals(10)
         signals.add(original1)
         signals.add(original2)
         A = np.random.random(size=(5, 2))
@@ -65,7 +65,7 @@ class TestLearningWorksMultiSignal:
         int_shift = [-1, -0.1]
 
         np.random.seed(10)
-        signals_1 = Signal.periodicBandlimitedSignals(10)
+        signals_1 = SignalCollection.periodicBandlimitedSignals(10)
         signals_1.add(
             Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
@@ -74,7 +74,7 @@ class TestLearningWorksMultiSignal:
         )
         A = [[0.9, 0.1], [0.2, 0.8]]
 
-        signals_2 = Signal.periodicBandlimitedSignals(10)
+        signals_2 = SignalCollection.periodicBandlimitedSignals(10)
         signals_2.add(
             Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
@@ -100,7 +100,7 @@ class TestLearningWorksMultiSignal:
         np.random.seed(10)
 
         np.random.seed(10)
-        signals_1 = Signal.periodicBandlimitedSignals(10)
+        signals_1 = SignalCollection.periodicBandlimitedSignals(10)
         signals_1.add(
             Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
@@ -109,7 +109,7 @@ class TestLearningWorksMultiSignal:
         )
         A = np.random.random(size=(5, 2))
 
-        signals_2 = Signal.periodicBandlimitedSignals(10)
+        signals_2 = SignalCollection.periodicBandlimitedSignals(10)
         signals_2.add(
             Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )

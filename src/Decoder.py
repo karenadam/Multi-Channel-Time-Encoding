@@ -564,7 +564,9 @@ class MSignalMChannelDecoder(Decoder):
             operator_inverse.dot(flat_bwd_mixing).dot(PCS_sampler).dot(q)
         ).reshape((self.n_signals, len(self.sinc_locs)))
 
-        return Signal.bandlimitedSignals(self.Omega, self.sinc_locs, x_sinc_amps)
+        return SignalCollection.bandlimitedSignals(
+            self.Omega, self.sinc_locs, x_sinc_amps
+        )
 
     def _decode_periodic(self, spikes):
         """
@@ -591,7 +593,7 @@ class MSignalMChannelDecoder(Decoder):
             np.linalg.pinv(measurement_operator).dot(measurement_vector)
         ).reshape((self.n_signals, 2 * self.n_components - 1))
 
-        return Signal.periodicBandlimitedSignals(
+        return SignalCollection.periodicBandlimitedSignals(
             self.period, self.n_components, recovered_coefficients
         )
 
@@ -614,7 +616,7 @@ class MSignalMChannelDecoder(Decoder):
            piecewise constant signal
         """
 
-        PCSSignal = Signal.piecewiseConstantSignals(
+        PCSSignal = SignalCollection.piecewiseConstantSignals(
             spikes.get_spikes(),
             values=[
                 [0] * (spikes.get_n_spikes_of(ch) - 1) for ch in range(self.n_channels)
@@ -943,11 +945,11 @@ class UnknownMixingDecoder(Decoder):
         )
 
         if not self.periodic:
-            y_param = Signal.bandlimitedSignals(
+            y_param = SignalCollection.bandlimitedSignals(
                 self.Omega, self.sinc_locs, sinc_amps=C_y
             )
         else:
-            y_param = Signal.periodicBandlimitedSignals(
+            y_param = SignalCollection.periodicBandlimitedSignals(
                 self.period, self.n_components, C_y
             )
         return y_param if return_as_param else y_param.sample(t)

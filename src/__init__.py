@@ -10,6 +10,7 @@ from enum import Enum, auto
 import src.Helpers
 from .TEMParams import *
 import src.Signals.Signal as Signal
+import src.Signals.SignalCollection as SignalCollection
 import src.Signals.FRISignal as FRISignal
 from .Spike_Times import *
 import src.Encoder

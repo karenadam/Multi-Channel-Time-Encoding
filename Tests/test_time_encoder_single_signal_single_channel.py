@@ -24,8 +24,9 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
@@ -52,8 +53,9 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
@@ -85,12 +87,13 @@ class TestTimeEncoderSingleSignalSingleChannel:
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
         x_param = []
-        original = Signal.bandlimitedSignal(omega)
-        original.random(t)
+        original = Signal.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 15, np.pi / omega)
+        )
         x_param.append(original)
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
-        signal = Signal.bandlimitedSignals(omega)
+        signal = SignalCollection.bandlimitedSignals(omega)
         signal.add(original)
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
