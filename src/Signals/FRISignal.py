@@ -24,7 +24,7 @@ class FRISignal(object):
         self, dirac_locations: np.array, dirac_weights: np.array, period: float
     ):
         """
-        Parameters
+        PARAMETERS
         ----------
         dirac_locations: list or np.ndarray
             list of floats representing locations of diracs
@@ -42,12 +42,12 @@ class FRISignal(object):
 
     def get_fourier_series(self, m: np.array):
         """
-        Parameters
+        PARAMETERS
         ----------
         m: np.ndarray
             indices of desired fourier series coefficients
 
-        Returns
+        RETURNS
         -------
         np.ndarray
             fourier series coefficients of indices m

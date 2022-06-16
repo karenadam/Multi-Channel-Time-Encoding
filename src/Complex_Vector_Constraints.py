@@ -64,3 +64,57 @@ class complex_vector_constraints(object):
                 for i_entry in range(n_constraints)
             ]
         )
+
+
+class complex_tensor_constraints(object):
+    def __init__(self, shape_complex_tensor):
+        self.shape_complex_tensor = shape_complex_tensor
+
+    def real_constraints(self, indices):
+        op_i = np.zeros(self.shape_complex_tensor)
+        op_i[indices] = 1
+        flat_op_i = np.atleast_2d(
+            np.concatenate(
+                [op_i.flatten(), np.zeros((np.product(self.shape_complex_tensor)))]
+            )
+        )
+        return flat_op_i
+
+    def equality_constraints(self, indices_1, indices_2):
+        op_i = np.zeros(self.shape_complex_tensor)
+        op_i[indices_1] += 1
+        op_i[indices_2] -= 1
+
+        flat_real_op_i = np.atleast_2d(
+            np.concatenate(
+                [np.zeros((np.product(self.shape_complex_tensor))), op_i.flatten()]
+            )
+        )
+        flat_imag_op_i = np.atleast_2d(
+            np.concatenate(
+                [op_i.flatten(), np.zeros((np.product(self.shape_complex_tensor)))]
+            )
+        )
+        return np.concatenate([flat_real_op_i, flat_imag_op_i])
+
+    def complex_conjugate_constraints(self, indices_1, indices_2):
+        imag_op_i = Helpers.indicator_matrix(
+            self.shape_complex_tensor, [indices_1, indices_2]
+        )
+
+        real_op_i = Helpers.indicator_matrix(
+            self.shape_complex_tensor, [indices_1]
+        ) - Helpers.indicator_matrix(self.shape_complex_tensor, [indices_2])
+
+        flat_real_op_i = np.atleast_2d(
+            np.concatenate(
+                [np.zeros((np.product(self.shape_complex_tensor))), real_op_i.flatten()]
+            )
+        )
+        flat_imag_op_i = np.atleast_2d(
+            np.concatenate(
+                [imag_op_i.flatten(), np.zeros((np.product(self.shape_complex_tensor)))]
+            )
+        )
+
+        return np.concatenate([flat_real_op_i, flat_imag_op_i])

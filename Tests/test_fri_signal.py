@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 
 import src
 
-
 class TestFriSignal:
     def test_proper_creation(self):
         fri_signal = src.FRISignal.FRISignal(

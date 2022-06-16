@@ -33,7 +33,7 @@ class SignalCollection(object):
 
         PARAMETERS
         ----------
-        t: list or np.ndarray
+        t: array_like
             time(s) at which the signals should be sampled
 
         Returns
@@ -297,7 +297,7 @@ class piecewiseConstantSignals(SignalCollection):
 
         PARAMETERS
         ----------
-        sample_locs: list or np.ndarray
+        sample_locs: array_like
             location(s) at which samples should be taken
         omega: float
             bandwidth of the low pass filter to be used
@@ -319,7 +319,7 @@ class piecewiseConstantSignals(SignalCollection):
 
         PARAMETERS
         ----------
-        sample_locs: list or np.ndarray
+        sample_locs: array_like
             location(s) at which samples should be taken
         omega: float
             bandwidth of the low pass filter to be used

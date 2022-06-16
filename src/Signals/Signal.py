@@ -83,7 +83,7 @@ class periodicBandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -103,9 +103,9 @@ class periodicBandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t_start: int, list or np.ndarray
+        t_start: float or array_like
             lower bound(s) of the integral computation
-        t_end: int, list or np.ndarray
+        t_end: float or array_like
             upper bound(s) of the integral computation
 
         RETURNS
@@ -155,9 +155,9 @@ class bandlimitedSignal(Signal):
         ----------
         Omega: float
             bandwith of the signal, i.e. frequency used for the sincs
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             locations of the sincs that form the signal
-        sinc_amps: list or np.ndarray
+        sinc_amps: array_like
             amplitudes of the sincs that form the signal
         """
 
@@ -173,7 +173,7 @@ class bandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -193,9 +193,9 @@ class bandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t_start: int, list or np.ndarray
+        t_start: float or array_like
             lower bound(s) of the integral computation
-        t_end: int, list or np.ndarray
+        t_end: float or array_like
             upper bound(s) of the integral computation
 
         RETURNS
@@ -239,9 +239,9 @@ class piecewiseConstantSignal(Signal):
 
     ATTRIBUTES
     ----------
-    _discontinuities: list or np.ndarray
+    _discontinuities: array_like
         points at which the signal changes value
-    _values: list or np.ndarray
+    _values: array_like
         values the signal takes between pairs of successive discontinuities
     """
 
@@ -249,9 +249,9 @@ class piecewiseConstantSignal(Signal):
         """
         PARAMETERS
         ----------
-        discontinuities: list or np.ndarray
+        discontinuities: array_like
             points at which the signal changes value
-        values: list or np.ndarray
+        values: array_like
             values the signal takes between pairs of successive discontinuities
         """
         if len(discontinuities) != len(values) + 1:
@@ -265,7 +265,7 @@ class piecewiseConstantSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -314,9 +314,9 @@ class lPFedPCSSignal(Signal):
 
     ATTRIBUTES
     ----------
-    _discontinuities: list or np.ndarray
+    _discontinuities: array_like
         points at which the signal changes value
-    _values: list or np.ndarray
+    _values: array_like
         values the signal takes between pairs of successive discontinuities
     omega: float
         bandwidth of sinc used to low pass filter the signal
@@ -331,7 +331,7 @@ class lPFedPCSSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -356,7 +356,7 @@ class lPFedPCSSignal(Signal):
 
         PARAMETERS
         ----------
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             location of sincs that make up the resulting signal
 
         RETURNS

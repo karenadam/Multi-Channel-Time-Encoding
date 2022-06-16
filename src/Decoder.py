@@ -448,7 +448,7 @@ class MSignalMChannelDecoder(Decoder):
             period of periodic signal
         n_components: int
             number of FS components of periodic signal
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             list of locations of sincs that make up an aperiodic signals
         """
 
@@ -680,7 +680,7 @@ class MSignalMChannelDecoder(Decoder):
 
         PARAMETERS
         ----------
-        mixing_matrix: list or np.ndarray
+        mixing_matrix: array_like
             matrix to be flattened
 
         RETURNS
@@ -836,7 +836,7 @@ class UnknownMixingDecoder(Decoder):
             period of periodic signal
         n_components: int
             number of FS components of periodic signal
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             list of locations of sincs that make up an aperiodic signals
         """
 

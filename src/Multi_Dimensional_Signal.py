@@ -138,32 +138,12 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             self.periods[-1], self.n_t_components, time_components_reshuffled
         )
 
-    def complex_conjugate_constraints(self, indices_1, indices_2):
-        imag_op_i = Helpers.indicator_matrix(
-            self.num_components, [indices_1, indices_2]
-        )
-
-        real_op_i = Helpers.indicator_matrix(
-            self.num_components, [indices_1]
-        ) - Helpers.indicator_matrix(self.num_components, [indices_2])
-
-        flat_real_op_i = np.atleast_2d(
-            np.concatenate(
-                [np.zeros((np.product(self.num_components))), real_op_i.flatten()]
-            )
-        )
-        flat_imag_op_i = np.atleast_2d(
-            np.concatenate(
-                [imag_op_i.flatten(), np.zeros((np.product(self.num_components)))]
-            )
-        )
-
-        return np.concatenate([flat_real_op_i, flat_imag_op_i])
-
     def center_point_reflection_complex_conjugate_constraints(self):
+        cstr = complex_tensor_constraints(self.num_components)
+
         return np.concatenate(
             [
-                self.complex_conjugate_constraints(
+                cstr.complex_conjugate_constraints(
                     (dim_i, dim_j, dim_k), (-dim_i, -dim_j, -dim_k)
                 )
                 for dim_i in range(self.num_components[0])
@@ -171,33 +151,6 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                 for dim_k in range(self.num_components[2])
             ]
         )
-
-    def equality_constraints(self, indices_1, indices_2):
-        op_i = np.zeros(self.num_components)
-        op_i[indices_1] += 1
-        op_i[indices_2] -= 1
-
-        flat_real_op_i = np.atleast_2d(
-            np.concatenate(
-                [np.zeros((np.product(self.num_components))), op_i.flatten()]
-            )
-        )
-        flat_imag_op_i = np.atleast_2d(
-            np.concatenate(
-                [op_i.flatten(), np.zeros((np.product(self.num_components)))]
-            )
-        )
-        return np.concatenate([flat_real_op_i, flat_imag_op_i])
-
-    def real_constraints(self, indices):
-        op_i = np.zeros(self.num_components)
-        op_i[indices] = 1
-        flat_op_i = np.atleast_2d(
-            np.concatenate(
-                [op_i.flatten(), np.zeros((np.product(self.num_components)))]
-            )
-        )
-        return flat_op_i
 
     def impose_real_coefficients(self):
         def index_values(dim):
@@ -212,9 +165,10 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
             )
 
         indices = [index_values(dim) for dim in range(self.numDimensions)]
+        cstr = complex_tensor_constraints(self.num_components)
         return np.concatenate(
             [
-                self.real_constraints((dim_i, dim_j, dim_k))
+                cstr.real_constraints((dim_i, dim_j, dim_k))
                 for dim_i in indices[0]
                 for dim_j in indices[1]
                 for dim_k in indices[2]
@@ -230,8 +184,9 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
                 ):
                     equal_indices = list(indices)
                     equal_indices[n_period] = -indices[n_period]
+                    cstr = complex_tensor_constraints(self.num_components)
                     ops = np.concatenate(
-                        [ops, self.equality_constraints(indices, tuple(equal_indices))]
+                        [ops, cstr.equality_constraints(indices, tuple(equal_indices))]
                     )
             return ops
 
@@ -266,9 +221,11 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
 
             if len(indices[component_index]) == 0:
                 return np.zeros((0, 2 * np.product(self.num_components)))
+            cstr = complex_tensor_constraints(self.num_components)
+
             return np.concatenate(
                 [
-                    self.complex_conjugate_constraints(
+                    cstr.complex_conjugate_constraints(
                         (dim_i, dim_j, dim_k),
                         (
                             index_multiplier[0] * dim_i,
