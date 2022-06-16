@@ -94,7 +94,7 @@ class Layer(object):
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
     def get_ex_measurement_pairs(
-        self, input: Signals.SignalCollection, spike_times: SpikeTimes
+        self, input: signals.signal_collection, spike_times: SpikeTimes
     ):
         """
         returns the measurement matrix and vector corresponding to the weight matrix of
@@ -102,7 +102,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signals.SignalCollection
+        input: signals.signal_collection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -135,7 +135,7 @@ class Layer(object):
         ]
 
         integrals = [
-            Helpers.exp_int(
+            helpers.kernels.exp_int(
                 exponents,
                 s_t[:-1],
                 s_t[1:],
@@ -184,7 +184,7 @@ class Layer(object):
         ].reshape((self.num_outputs, self.num_inputs))
 
     def learn_weight_matrix_from_one_ex(
-        self, input: Signals.SignalCollection, spike_times: Spike_Times
+        self, input: signals.signal_collection, spike_times: spike_times
     ):
         """
         learns the weight matrix that solves (in the least-squares sense) for the
@@ -192,7 +192,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signals.SignalCollection
+        input: signals.signal_collection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -223,7 +223,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signals.SignalCollection objects, input to the layer in the different examples
+            list of signals.signal_collection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -278,7 +278,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signals.SignalCollection objects, input to the layer in the different examples
+            list of signals.signal_collection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -364,7 +364,7 @@ class Layer(object):
         )
 
     def learn_spike_input_and_weight_matrix_from_one_example(
-        self, spike_times: Spike_Times, n_fsc: int, period: float
+        self, spike_times: spike_times, n_fsc: int, period: float
     ):
         """
         simultaneously learns (and sets) the weight matrix of a layer and returns
@@ -396,7 +396,7 @@ class Layer(object):
         return recovered_times
 
     def get_diracs_from_spikes(
-        self, spike_times: Spike_Times, n_fsc: int, period: float
+        self, spike_times: spike_times, n_fsc: int, period: float
     ):
         """
         retrieves the input spikes (timing and amplitude) that generate the output
@@ -487,7 +487,7 @@ class Layer(object):
 
     def _get_preactivation_fsc_measurement_constraints(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_o: int,
         n_fsc: int,
         period: float,
@@ -524,7 +524,7 @@ class Layer(object):
         """
 
         exponents = 1j * 2 * np.pi / period * np.arange(-n_fsc + 1, n_fsc, 1)
-        integrals = Helpers.exp_int(
+        integrals = helpers.kernels.exp_int(
             exponents, spike_times[n_o][:-1], spike_times[n_o][1:]
         )
 
@@ -574,7 +574,7 @@ class Layer(object):
 
     def _get_preactivation_fsc_single_neuron(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_o: int,
         n_fsc: int,
         period: float,
@@ -626,7 +626,7 @@ class Layer(object):
 
     def get_preactivation_fsc(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_fsc: int,
         period: float,
         real_f_s: bool = False,

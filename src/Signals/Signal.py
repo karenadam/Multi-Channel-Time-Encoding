@@ -184,7 +184,7 @@ class bandlimitedSignal(Signal):
 
         signal = np.zeros_like(t)
         for i in range(len(self._sinc_locs)):
-            signal += self._sinc_amps[i] * Helpers.sinc(
+            signal += self._sinc_amps[i] * helpers.kernels.sinc(
                 t - self._sinc_locs[i], self.Omega
             )
         return signal
@@ -212,8 +212,8 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                Helpers.sinc_integral(t_end.T - sinc_locs, self._Omega)
-                - Helpers.sinc_integral(t_start.T - sinc_locs, self._Omega)
+                    helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
+                    - helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
             ),
             1,
         )
@@ -343,8 +343,8 @@ class lPFedPCSSignal(Signal):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                Helpers.sinc_integral(t - self.discontinuities[value_index], self.omega)
-                - Helpers.sinc_integral(
+                    helpers.kernels.sinc_integral(t - self.discontinuities[value_index], self.omega)
+                    - helpers.kernels.sinc_integral(
                     t - self.discontinuities[value_index + 1], self.omega
                 )
             )

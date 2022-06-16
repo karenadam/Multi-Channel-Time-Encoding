@@ -368,7 +368,7 @@ class TestFriSignal:
         concatenated_constraints = np.concatenate(
             (projection_constraints, circularity_constraints)
         )
-        circ_matrix_recovered = src.Helpers.singular_value_projection_w_matrix(
+        circ_matrix_recovered = src.helpers.singular_value_projection_w_matrix(
             recovered_matrix_shape,
             concatenated_constraints,
             concatenated_measurements,

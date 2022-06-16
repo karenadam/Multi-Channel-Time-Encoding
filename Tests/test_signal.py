@@ -118,7 +118,7 @@ class TestLPFPCSsignal:
         filtered_signal = signal.low_pass_filter(omega)
         samples_filtered = filtered_signal.sample(t)
 
-        sampled_sinc = Helpers.sinc(t - 5, omega)
+        sampled_sinc = helpers.kernels.sinc(t - 5, omega)
         samples_discrete_filtered = scipy.signal.convolve(samples, sampled_sinc) * (
             t[1] - t[0]
         )
@@ -162,15 +162,15 @@ class TestBandlimitedPeriodicSignals:
 class TestMultiDimPeriodicSignal:
     def test_signal_generation(self):
         opt = {"time_domain_samples": np.random.random((4, 4, 4))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
 
         opt = {"freq_domain_samples": np.random.random((4, 4, 4))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         assert True
 
     def test_signal_sampling(self):
         opt = {"time_domain_samples": np.random.random((7, 5, 7))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         coordinates = [0, 0, 0]
         assert (
             normed_difference(
@@ -195,7 +195,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_nonint1(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 1))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         xcord, ycord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -207,7 +207,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_nonint1_2(self):
         opt = {"time_domain_samples": np.random.random((2, 4, 1))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         xcord, ycord = np.random.randint(0, 2), np.random.randint(0, 2)
         assert (
             normed_difference(
@@ -219,7 +219,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_int1_1(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 3))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         xcord, ycord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -231,7 +231,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_int1_2(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 3))}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         xcord, tcord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -249,7 +249,7 @@ class TestMultiDimPeriodicSignal:
             return (1 / 3**3) * np.cos(2 * np.pi / 3 * (xcord + ycord + tcord))
 
         opt = {"freq_domain_samples": FT}
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         assert normed_difference(signal.sample([1, 2, 1]), sampled(1, 2, 1)) < 1e-6
         assert normed_difference(signal.sample([1, 1, 0.1]), sampled(1, 1, 0.1)) < 1e-6
         assert normed_difference(signal.sample([0, 2.1, 1]), sampled(0, 2.1, 1)) < 1e-6
@@ -282,7 +282,7 @@ class TestMultiDimPeriodicSignal:
 
         opt = {"time_domain_samples": TD_samples}
 
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         time_sig = signal.get_time_signal([1, 2])
         print("BLA")
         print(time_sig.sample(0.8))
@@ -302,7 +302,7 @@ class TestMultiDimPeriodicSignal:
 
         opt = {"time_domain_samples": TD}
 
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         x, y, target_time = [2.8, 1.2, 4.5]
         precise_integral = signal.get_precise_integral([x, y, target_time])
         BLsig_precise_integral = signal.get_time_signal([x, y]).get_precise_integral(
@@ -321,7 +321,7 @@ class TestMultiDimPeriodicSignal:
         TD = np.random.randint(0, 20, (4, 5, 5)) / 10.0
         opt = {"time_domain_samples": TD}
 
-        signal = MultiDimPeriodicSignal(opt)
+        signal = Video(opt)
         time_signal = signal.get_time_signal([2, 3])
         # import pudb
         # pudb.set_trace()
@@ -375,7 +375,7 @@ class TestMultiDimPeriodicSignal:
     def get_random_video(self, VID_WIDTH, VID_HEIGHT, num_images):
         TD = np.random.random(size=(VID_HEIGHT, VID_WIDTH, num_images))
         opt = {"time_domain_samples": TD}
-        video = MultiDimPeriodicSignal(opt)
+        video = Video(opt)
         return video
 
     def check_fourier_symmetry(self, video):
@@ -413,22 +413,22 @@ class TestMultiDimPeriodicSignal:
         kappa, b = 1, 0
         tem_mult = TEMParams(kappa, deltas, b, np.eye(len(TEM_locations)))
         end_time = video.periods[-1]
-        spikes = Encoder.ContinuousEncoder(tem_mult).encode(
+        spikes = encoder.ContinuousEncoder(tem_mult).encode(
             signals, end_time, tolerance=1e-14, with_start_time=False
         )
         # spikes = ContinuousEncoder(tem_mult).encode_video(video, TEM_locations,end_time, tol=1e-14, with_start_time = False)
 
-        decoder = Decoder.MSignalMChannelDecoder(
+        dec = decoder.MSignalMChannelDecoder(
             tem_mult,
             periodic=True,
             period=video.periods[-1],
             n_components=video.num_components[-1],
         )
-        integrals = decoder.get_measurement_vector(spikes)
+        integrals = dec.get_measurement_vector(spikes)
         (
             integral_start_coordinates,
             integral_end_coordinates,
-        ) = decoder.get_integral_start_end_coordinates(spikes, TEM_locations)
+        ) = dec.get_integral_start_end_coordinates(spikes, TEM_locations)
         coefficients = video.get_coefficients_from_integrals(
             integral_start_coordinates, integral_end_coordinates, integrals
         )

@@ -28,7 +28,7 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 13)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 13)
         tem_params.mixing_matrix = np.eye(2)
         print(spikes_mult.get_total_num_spike_diffs())
 
@@ -72,7 +72,7 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 30)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 30)
         tem_params.mixing_matrix = np.eye(2)
         print(spikes_mult.get_total_num_spike_diffs())
 
@@ -125,7 +125,7 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 50)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 50)
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2, 2)
@@ -176,7 +176,7 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 50)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 50)
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2, 2)
@@ -195,10 +195,10 @@ class TestLearningWorksOneExample:
     #     t_k_4 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
     #     t_k = np.concatenate((t_k_1, t_k_2, t_k_3, t_k_4))
     #
-    #     fri_signal_1 = src.Signals.FRISignal(t_k_1, np.ones_like(t_k_1), period)
-    #     fri_signal_2 = src.Signals.FRISignal(t_k_2, np.ones_like(t_k_2), period)
-    #     fri_signal_3 = src.Signals.FRISignal(t_k_3, np.ones_like(t_k_3), period)
-    #     fri_signal_4 = src.Signals.FRISignal(t_k_4, np.ones_like(t_k_4), period)
+    #     fri_signal_1 = src.signals.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+    #     fri_signal_2 = src.signals.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+    #     fri_signal_3 = src.signals.FRISignal(t_k_3, np.ones_like(t_k_3), period)
+    #     fri_signal_4 = src.signals.FRISignal(t_k_4, np.ones_like(t_k_4), period)
     #
     #     n_f_s = num_diracs_per_signal + 1
     #     f_s_coefficients = np.zeros((4, 2 * n_f_s - 1), dtype="complex")
@@ -279,7 +279,7 @@ class TestLearningWorksOneExample:
             tem_params = TEMParams(1, 1, 1, A, int_shift)
 
             spikes_mult.append(
-                Encoder.ContinuousEncoder(tem_params).encode(signals, 50)
+                encoder.ContinuousEncoder(tem_params).encode(signals, 50)
             )
 
         single_layer = Layer(2, 2)

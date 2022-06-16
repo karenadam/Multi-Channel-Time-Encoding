@@ -25,7 +25,7 @@ class TestLearningWorksOneSignal:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 5)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 5)
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 2)
@@ -51,7 +51,7 @@ class TestLearningWorksOneSignal:
 
         tem_params = TEMParams(1, 1, 1, A)
 
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, 6)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 6)
         print(spikes_mult.get_total_num_spike_diffs())
 
         single_layer = Layer(2, 5)
@@ -84,8 +84,8 @@ class TestLearningWorksMultiSignal:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult_1 = Encoder.ContinuousEncoder(tem_params).encode(signals_1, 3)
-        spikes_mult_2 = Encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
+        spikes_mult_1 = encoder.ContinuousEncoder(tem_params).encode(signals_1, 3)
+        spikes_mult_2 = encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
 
         single_layer = Layer(2, 2)
         single_layer.learn_weight_matrix_from_m_ex(
@@ -119,8 +119,8 @@ class TestLearningWorksMultiSignal:
 
         tem_params = TEMParams(1, 1, 1, A)
 
-        spikes_mult_1 = Encoder.ContinuousEncoder(tem_params).encode(signals_1, 3)
-        spikes_mult_2 = Encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
+        spikes_mult_1 = encoder.ContinuousEncoder(tem_params).encode(signals_1, 3)
+        spikes_mult_2 = encoder.ContinuousEncoder(tem_params).encode(signals_2, 3)
 
         single_layer = Layer(2, 5)
         single_layer.learn_weight_matrix_from_m_ex(

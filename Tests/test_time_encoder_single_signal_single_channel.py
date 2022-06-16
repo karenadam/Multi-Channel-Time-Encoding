@@ -31,10 +31,10 @@ class TestTimeEncoderSingleSignalSingleChannel:
         b = np.max(np.abs(y)) + 1
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = Encoder.DiscreteEncoder(tem_params).encode(
+        spikes_single = encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=15, delta_t=delta_t
         )
-        rec_single = Decoder.SSignalMChannelDecoder(
+        rec_single = decoder.SSignalMChannelDecoder(
             tem_params, periodic=False, Omega=omega
         ).decode(spikes_single, t)
         start_index = int(len(y) / 10)
@@ -61,12 +61,12 @@ class TestTimeEncoderSingleSignalSingleChannel:
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
 
-        encoder = Encoder.DiscreteEncoder(tem_params)
-        spikes_single = encoder.encode(original, signal_end_time=15, delta_t=delta_t)
-        decoder = Decoder.SSignalMChannelDecoder(
+        enc = encoder.DiscreteEncoder(tem_params)
+        spikes_single = enc.encode(original, signal_end_time=15, delta_t=delta_t)
+        dec = decoder.SSignalMChannelDecoder(
             tem_params, periodic=False, Omega=omega
         )
-        rec_single = decoder.decode(
+        rec_single = dec.decode(
             spikes_single,
             t,
         )
@@ -97,8 +97,8 @@ class TestTimeEncoderSingleSignalSingleChannel:
         signal.add(original)
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
-        rec_single = Decoder.SSignalMChannelDecoder(
+        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
+        rec_single = decoder.SSignalMChannelDecoder(
             tem_params, periodic=False, Omega=omega
         ).decode(
             spikes_single,

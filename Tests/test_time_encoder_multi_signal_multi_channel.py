@@ -32,9 +32,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, t[-1])
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, t[-1])
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -83,9 +83,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y_param.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -141,9 +141,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         # signal_set.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,

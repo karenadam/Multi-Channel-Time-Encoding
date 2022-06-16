@@ -1,6 +1,6 @@
 from src import *
 
-# import Signals
+# import signals
 from typing import Union
 
 

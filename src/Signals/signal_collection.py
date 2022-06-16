@@ -335,8 +335,8 @@ class piecewiseConstantSignals(SignalCollection):
             low_limit = np.array(self.discontinuities[signal_index][:-1])
             up_limit = np.array(self.discontinuities[signal_index][1:])
             return np.atleast_2d(
-                Helpers.sinc_integral(sample_loc - low_limit, omega)
-                - Helpers.sinc_integral(sample_loc - up_limit, omega)
+                helpers.kernels.sinc_integral(sample_loc - low_limit, omega)
+                - helpers.kernels.sinc_integral(sample_loc - up_limit, omega)
             )
 
         PCS_sampler_matrix = scipy.linalg.block_diag(

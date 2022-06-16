@@ -38,10 +38,10 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8], [0.1, 0.9], [0.5, 0.5]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
+        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=25, delta_t=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(
+        rec_mult = decoder.UnknownMixingDecoder(
             tem_params, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -100,10 +100,10 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8], [0.1, 0.9], [0.5, 0.5]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
+        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=25, delta_t=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(
+        rec_mult = decoder.UnknownMixingDecoder(
             tem_params, periodic=True, n_components=n_components, period=period
         ).decode(spikes_mult, 2, t)
 
