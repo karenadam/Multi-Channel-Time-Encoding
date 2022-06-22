@@ -1,3 +1,5 @@
+import numpy as np
+import scipy.linalg
 from src import *
 
 
@@ -495,7 +497,7 @@ class MSignalMChannelDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -517,7 +519,7 @@ class MSignalMChannelDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -564,7 +566,7 @@ class MSignalMChannelDecoder(Decoder):
             operator_inverse.dot(flat_bwd_mixing).dot(PCS_sampler).dot(q)
         ).reshape((self.n_signals, len(self.sinc_locs)))
 
-        return SignalCollection.bandlimitedSignals(
+        return src.signals.bandlimitedSignals(
             self.Omega, self.sinc_locs, x_sinc_amps
         )
 
@@ -593,7 +595,7 @@ class MSignalMChannelDecoder(Decoder):
             np.linalg.pinv(measurement_operator).dot(measurement_vector)
         ).reshape((self.n_signals, 2 * self.n_components - 1))
 
-        return SignalCollection.periodicBandlimitedSignals(
+        return src.signals.periodicBandlimitedSignals(
             self.period, self.n_components, recovered_coefficients
         )
 
@@ -616,7 +618,7 @@ class MSignalMChannelDecoder(Decoder):
            piecewise constant signal
         """
 
-        PCSSignal = SignalCollection.piecewiseConstantSignals(
+        PCSSignal = src.signals.piecewiseConstantSignals(
             spikes.get_spikes(),
             values=[
                 [0] * (spikes.get_n_spikes_of(ch) - 1) for ch in range(self.n_channels)
@@ -928,7 +930,7 @@ class UnknownMixingDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -945,11 +947,11 @@ class UnknownMixingDecoder(Decoder):
         )
 
         if not self.periodic:
-            y_param = SignalCollection.bandlimitedSignals(
+            y_param = src.signals.bandlimitedSignals(
                 self.Omega, self.sinc_locs, sinc_amps=C_y
             )
         else:
-            y_param = SignalCollection.periodicBandlimitedSignals(
+            y_param = src.signals.periodicBandlimitedSignals(
                 self.period, self.n_components, C_y
             )
         return y_param if return_as_param else y_param.sample(t)

@@ -13,14 +13,14 @@ class TestLearningWorksOneExample:
         n_components = 10
 
         np.random.seed(10)
-        signals = SignalCollection.periodicBandlimitedSignals(period)
+        signals = src.signals.periodicBandlimitedSignals(period)
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, np.random.random(size=(10,))
             )
         )
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, np.random.random(size=(10,))
             )
         )
@@ -48,13 +48,13 @@ class TestLearningWorksOneExample:
         n_components = 10
 
         np.random.seed(10)
-        signals = SignalCollection.periodicBandlimitedSignals(period)
+        signals = src.signals.periodicBandlimitedSignals(period)
         f_s_components_signal_1 = np.random.random(size=(10,)) + 1j * np.random.random(
             size=(10,)
         )
         f_s_components_signal_1[0] = np.real(f_s_components_signal_1[0])
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_1
             )
         )
@@ -64,7 +64,7 @@ class TestLearningWorksOneExample:
         )
         f_s_components_signal_2[0] = np.real(f_s_components_signal_2[0])
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_2
             )
         )
@@ -99,8 +99,8 @@ class TestLearningWorksOneExample:
         t_k_2 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
         t_k = np.concatenate((t_k_1, t_k_2))
 
-        fri_signal_1 = FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
-        fri_signal_2 = FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+        fri_signal_1 = src.signals.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+        fri_signal_2 = src.signals.FRISignal(t_k_2, np.ones_like(t_k_2), period)
 
         f_s_components_signal_1 = fri_signal_1.get_fourier_series(
             np.arange(0, n_components, 1).T
@@ -110,14 +110,14 @@ class TestLearningWorksOneExample:
         )
 
         np.random.seed(10)
-        signals = SignalCollection.periodicBandlimitedSignals(period)
+        signals = src.signals.periodicBandlimitedSignals(period)
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_1
             )
         )
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_2
             )
         )
@@ -150,8 +150,8 @@ class TestLearningWorksOneExample:
         t_k_2 = np.random.uniform(low=0.0, high=period, size=(num_diracs_per_signal))
         t_k = np.concatenate((t_k_1, t_k_2))
 
-        fri_signal_1 = FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
-        fri_signal_2 = FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+        fri_signal_1 = src.signals.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+        fri_signal_2 = src.signals.FRISignal(t_k_2, np.ones_like(t_k_2), period)
 
         f_s_components_signal_1 = fri_signal_1.get_fourier_series(
             np.arange(0, n_components, 1).T
@@ -161,14 +161,14 @@ class TestLearningWorksOneExample:
         )
 
         np.random.seed(10)
-        signals = SignalCollection.periodicBandlimitedSignals(period)
+        signals = src.signals.periodicBandlimitedSignals(period)
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_1
             )
         )
         signals.add(
-            Signal.periodicBandlimitedSignal(
+            src.signals.periodicBandlimitedSignal(
                 period, n_components, f_s_components_signal_2
             )
         )
@@ -253,8 +253,8 @@ class TestLearningWorksOneExample:
             )
             t_k.append(np.concatenate((t_k_1, t_k_2)))
 
-            fri_signal_1 = FRISignal.FRISignal(t_k_1, np.ones_like(t_k_1), period)
-            fri_signal_2 = FRISignal.FRISignal(t_k_2, np.ones_like(t_k_2), period)
+            fri_signal_1 = src.signals.FRISignal(t_k_1, np.ones_like(t_k_1), period)
+            fri_signal_2 = src.signals.FRISignal(t_k_2, np.ones_like(t_k_2), period)
 
             f_s_components_signal_1 = fri_signal_1.get_fourier_series(
                 np.arange(0, n_components, 1).T
@@ -263,14 +263,14 @@ class TestLearningWorksOneExample:
                 np.arange(0, n_components, 1).T
             )
 
-            signals = SignalCollection.periodicBandlimitedSignals(period)
+            signals = src.signals.periodicBandlimitedSignals(period)
             signals.add(
-                Signal.periodicBandlimitedSignal(
+                src.signals.periodicBandlimitedSignal(
                     period, n_components, f_s_components_signal_1
                 )
             )
             signals.add(
-                Signal.periodicBandlimitedSignal(
+                src.signals.periodicBandlimitedSignal(
                     period, n_components, f_s_components_signal_2
                 )
             )

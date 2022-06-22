@@ -10,7 +10,7 @@ def get_f_s_coeffs_from_time_encoded_video(
     video, TEM_locations, rank=10, num_spikes=None, plot=False
 ):
 
-    signals = SignalCollection.periodicBandlimitedSignals(period=video.periods[-1])
+    signals = src.signals.periodicBandlimitedSignals(period=video.periods[-1])
     deltas = []
     if num_spikes is None:
         num_spikes = video.periods[-1] + 8.5
@@ -54,7 +54,7 @@ class TestTimeEncoderVideo:
         length = 10
         t_d_samples = np.random.random((height, width, length))
         opt = {"time_domain_samples": t_d_samples}
-        video = Video(opt)
+        video = src.signals.Video(opt)
         TEM_locations = [[v, h] for v in range(height) for h in range(width)]
         f_s_coefficients = get_f_s_coeffs_from_time_encoded_video(
             video, TEM_locations=TEM_locations, num_spikes=length + 1
@@ -67,7 +67,7 @@ class TestTimeEncoderVideo:
         length = 12
         t_d_samples = np.random.random((height, width, length))
         opt = {"time_domain_samples": t_d_samples}
-        video = Video(opt)
+        video = src.signals.Video(opt)
         TEM_locations = [
             [0.25 + 0.5 * v, 0.25 * 0.5 * h]
             for v in range(2 * height)
@@ -86,7 +86,7 @@ class TestTimeEncoderVideo:
         length = 10
         t_d_samples = np.random.random((height, width, length))
         opt = {"time_domain_samples": t_d_samples}
-        video = Video(opt)
+        video = src.signals.Video(opt)
         TEM_locations = [[v, h] for v in range(height) for h in range(width)]
         f_s_coefficients = get_f_s_coeffs_from_time_encoded_video(
             video, TEM_locations=TEM_locations, num_spikes=length + 1

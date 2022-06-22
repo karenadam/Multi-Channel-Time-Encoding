@@ -14,8 +14,8 @@ class TestTimeEncoderPeriodicWithStructure:
         b = 1
 
         period = 3
-        signal = Signal.periodicBandlimitedSignal(period, 2, [1, 2])
-        signals = SignalCollection.periodicBandlimitedSignals(period)
+        signal = src.signals.periodicBandlimitedSignal(period, 2, [1, 2])
+        signals = src.signals.periodicBandlimitedSignals(period)
         signals.add(signal)
         delta_t = 1e-4
         time = np.arange(0, 3, delta_t)
@@ -74,9 +74,9 @@ class TestTimeEncoderPeriodicWithStructure:
         delta_t = 1e-4
         time = np.arange(0, 3, delta_t)
 
-        signal = Signal.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
+        signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
         total_integral = signal.get_precise_integral(0, 3)
-        signals = SignalCollection.periodicBandlimitedSignals(
+        signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)
@@ -109,9 +109,9 @@ class TestTimeEncoderPeriodicWithStructure:
         delta_t = 1e-4
         time = np.arange(0, 3, delta_t)
 
-        signal = Signal.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
+        signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
         total_integral = signal.get_precise_integral(0, 3)
-        signals = SignalCollection.periodicBandlimitedSignals(
+        signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)
@@ -147,9 +147,9 @@ class TestTimeEncoderPeriodicWithStructure:
         delta_t = 1e-4
         time = np.arange(0, 3, delta_t)
 
-        signal = Signal.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
-        signal2 = Signal.periodicBandlimitedSignal(period, n_components, [-1, 0, 3])
-        signals = SignalCollection.periodicBandlimitedSignals(
+        signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
+        signal2 = src.signals.periodicBandlimitedSignal(period, n_components, [-1, 0, 3])
+        signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)
@@ -184,10 +184,10 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
         period = 3
         n_components = 3
         np.random.seed(77)
-        signal = Signal.periodicBandlimitedSignal(period, n_components, [1, 3, -1])
-        signal2 = Signal.periodicBandlimitedSignal(period, n_components, [2, 1, 1])
-        signal3 = Signal.periodicBandlimitedSignal(period, n_components, [-1, 2, 0])
-        signals = SignalCollection.periodicBandlimitedSignals(
+        signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 3, -1])
+        signal2 = src.signals.periodicBandlimitedSignal(period, n_components, [2, 1, 1])
+        signal3 = src.signals.periodicBandlimitedSignal(period, n_components, [-1, 2, 0])
+        signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)
@@ -239,10 +239,10 @@ class TestTimeEncoderBandlimitedPeriodicWithStructure:
         period = 3
         n_components = 3
         np.random.seed(77)
-        signal = Signal.periodicBandlimitedSignal(period, n_components, [1, 3, -1])
-        signal2 = Signal.periodicBandlimitedSignal(period, n_components, [2, 1, 1])
-        signal3 = Signal.periodicBandlimitedSignal(period, n_components, [-1, 2, 0])
-        signals = SignalCollection.periodicBandlimitedSignals(
+        signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 3, -1])
+        signal2 = src.signals.periodicBandlimitedSignal(period, n_components, [2, 1, 1])
+        signal3 = src.signals.periodicBandlimitedSignal(period, n_components, [-1, 2, 0])
+        signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)

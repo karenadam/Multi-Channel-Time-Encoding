@@ -1,3 +1,7 @@
+import numpy as np
+import numpy.matlib
+import src
+import src.helpers.kernels
 from src import *
 
 
@@ -184,7 +188,7 @@ class bandlimitedSignal(Signal):
 
         signal = np.zeros_like(t)
         for i in range(len(self._sinc_locs)):
-            signal += self._sinc_amps[i] * helpers.kernels.sinc(
+            signal += self._sinc_amps[i] * src.helpers.kernels.sinc(
                 t - self._sinc_locs[i], self.Omega
             )
         return signal
@@ -212,8 +216,8 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                    helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
-                    - helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
+                    src.helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
+                    - src.helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
             ),
             1,
         )
@@ -343,8 +347,8 @@ class lPFedPCSSignal(Signal):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                    helpers.kernels.sinc_integral(t - self.discontinuities[value_index], self.omega)
-                    - helpers.kernels.sinc_integral(
+                    src.helpers.kernels.sinc_integral(t - self.discontinuities[value_index], self.omega)
+                    - src.helpers.kernels.sinc_integral(
                     t - self.discontinuities[value_index + 1], self.omega
                 )
             )

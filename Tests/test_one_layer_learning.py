@@ -11,14 +11,14 @@ class TestLearningWorksOneSignal:
         int_shift = [-1, -0.1]
 
         np.random.seed(10)
-        original1 = Signal.periodicBandlimitedSignal(
+        original1 = src.signals.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
         np.random.seed(11)
-        original2 = Signal.periodicBandlimitedSignal(
+        original2 = src.signals.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
-        signals = SignalCollection.periodicBandlimitedSignals(10)
+        signals = src.signals.periodicBandlimitedSignals(10)
         signals.add(original1)
         signals.add(original2)
         A = [[0.9, 0.1], [0.2, 0.8]]
@@ -37,14 +37,14 @@ class TestLearningWorksOneSignal:
         int_shift = [-1, -0.1]
 
         np.random.seed(10)
-        original1 = Signal.periodicBandlimitedSignal(
+        original1 = src.signals.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
         np.random.seed(11)
-        original2 = Signal.periodicBandlimitedSignal(
+        original2 = src.signals.periodicBandlimitedSignal(
             10, 10, np.random.random(size=(10,))
         )
-        signals = SignalCollection.periodicBandlimitedSignals(10)
+        signals = src.signals.periodicBandlimitedSignals(10)
         signals.add(original1)
         signals.add(original2)
         A = np.random.random(size=(5, 2))
@@ -65,21 +65,21 @@ class TestLearningWorksMultiSignal:
         int_shift = [-1, -0.1]
 
         np.random.seed(10)
-        signals_1 = SignalCollection.periodicBandlimitedSignals(10)
+        signals_1 = src.signals.periodicBandlimitedSignals(10)
         signals_1.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         signals_1.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         A = [[0.9, 0.1], [0.2, 0.8]]
 
-        signals_2 = SignalCollection.periodicBandlimitedSignals(10)
+        signals_2 = src.signals.periodicBandlimitedSignals(10)
         signals_2.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         signals_2.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
@@ -100,21 +100,21 @@ class TestLearningWorksMultiSignal:
         np.random.seed(10)
 
         np.random.seed(10)
-        signals_1 = SignalCollection.periodicBandlimitedSignals(10)
+        signals_1 = src.signals.periodicBandlimitedSignals(10)
         signals_1.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         signals_1.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         A = np.random.random(size=(5, 2))
 
-        signals_2 = SignalCollection.periodicBandlimitedSignals(10)
+        signals_2 = src.signals.periodicBandlimitedSignals(10)
         signals_2.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
         signals_2.add(
-            Signal.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
+            src.signals.periodicBandlimitedSignal(10, 10, np.random.random(size=(10,)))
         )
 
         tem_params = TEMParams(1, 1, 1, A)

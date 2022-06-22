@@ -1,3 +1,5 @@
+import numpy as np
+import bisect
 from src import *
 
 
@@ -52,7 +54,7 @@ class DiscreteEncoder(Encoder):
 
         PARAMETERS
         ----------
-        signal: np.ndarray or Signal.SignalCollection
+        signal: np.ndarray or Signal.signalCollection
             signal(s) to be encoded
         signal_end_time: float
             time at which encoding should stop
@@ -72,8 +74,8 @@ class DiscreteEncoder(Encoder):
         self.__dict__.update(self.params.__dict__)
 
         spikes = SpikeTimes(self.n_channels)
-        if isinstance(signal, Signal.Signal) or isinstance(
-            signal, SignalCollection.SignalCollection
+        if isinstance(signal, src.signals.Signal) or isinstance(
+            signal, src.signals.signalCollection
         ):
             sampled = signal.sample(np.arange(0, signal_end_time, delta_t))
         else:
@@ -161,7 +163,7 @@ class ContinuousEncoder(Encoder):
 
         PARAMETERS
         ----------
-        signal: Signal.SignalCollection
+        signal: Signal.signalCollection
             signal(s) to be encoded
         signal_end_time: float
             time at which encoding should stop
@@ -226,7 +228,7 @@ class ContinuousEncoder(Encoder):
 
         PARAMETERS
         ----------
-        x_param: Signal.SignalCollection
+        x_param: Signal.signalCollection
             signal(s) to be encoded
         signal_end_time: float
             time at which encoding should stop

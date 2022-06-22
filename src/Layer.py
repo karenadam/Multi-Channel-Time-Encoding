@@ -1,3 +1,8 @@
+import numpy as np
+import scipy.linalg
+import src.signals.fri_signal
+from src.helpers.complex_tensor_constraints import complex_vector_constraints
+import copy
 from src import *
 import sklearn.cluster
 
@@ -94,7 +99,7 @@ class Layer(object):
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
     def get_ex_measurement_pairs(
-        self, input: signals.signal_collection, spike_times: SpikeTimes
+        self, input: src.signals.signalCollection, spike_times: SpikeTimes
     ):
         """
         returns the measurement matrix and vector corresponding to the weight matrix of
@@ -102,7 +107,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: signals.signal_collection
+        input: src.signals.signalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -184,7 +189,7 @@ class Layer(object):
         ].reshape((self.num_outputs, self.num_inputs))
 
     def learn_weight_matrix_from_one_ex(
-        self, input: signals.signal_collection, spike_times: spike_times
+        self, input: src.signals.signalCollection, spike_times: spike_times
     ):
         """
         learns the weight matrix that solves (in the least-squares sense) for the
@@ -192,7 +197,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: signals.signal_collection
+        input: src.signals.signalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -223,7 +228,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of signals.signal_collection objects, input to the layer in the different examples
+            list of src.signals.signalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -278,7 +283,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of signals.signal_collection objects, input to the layer in the different examples
+            list of src.signals.signalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -321,7 +326,7 @@ class Layer(object):
             vector containing the timing of the diracs in the signals with fourier
             series coefficients fsc
         """
-        a_filter = src.FRISignal.AnnihilatingFilter(fsc, filter_length)
+        a_filter = src.signals.fri_signal.AnnihilatingFilter(fsc, filter_length)
         filter_poly = np.polynomial.polynomial.Polynomial(
             a_filter.get_filter_coefficients()
         )
@@ -352,7 +357,7 @@ class Layer(object):
         """
 
         def get_fsc_of_unit_dirac(time: float, n_fsc, period):
-            return src.FRISignal.FRISignal(
+            return src.signals.fri_signal.FRISignal(
                 np.array([time]), np.array([1]), period
             ).get_fourier_series(np.arange(-n_fsc + 1, n_fsc, 1).T)
 

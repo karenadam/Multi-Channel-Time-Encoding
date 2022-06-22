@@ -22,7 +22,7 @@ class TestBandlimitedSignal:
         sinc_locs = [1.3, 2.8, 7.2]
         sinc_amps = [1, 5, 3]
         Omega = np.pi
-        signal = Signal.bandlimitedSignal(Omega, sinc_locs, sinc_amps)
+        signal = src.signals.bandlimitedSignal(Omega, sinc_locs, sinc_amps)
         t_int_0 = np.arange(2, 7, 0.01)
         t_int_1 = np.arange(4, 8, 0.01)
         discrete_integral_0 = np.sum(signal.sample(t_int_0)) * 0.01
@@ -44,7 +44,7 @@ class TestBandlimitedSignals:
         sinc_locs = [1, 2, 3]
         sinc_amps = [[1, 0, 1], [1, 1, 0]]
         omega = np.pi
-        signals = SignalCollection.bandlimitedSignals(omega, sinc_locs, sinc_amps)
+        signals = src.signals.bandlimitedSignals(omega, sinc_locs, sinc_amps)
         mixed_amplitudes = signals.mix_amplitudes([[2, 1], [1, 0]])
         expected_amplitudes = [3, 1, 2, 1, 0, 1]
 
@@ -55,7 +55,7 @@ class TestPiecewiseConstantSignal:
     def test_sampling(self):
         discontinuities = [1, 2]
         values = [1]
-        signal = Signal.piecewiseConstantSignal(discontinuities, values)
+        signal = src.signals.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample([0, 0.1, 1.2, 1.5, 1.7, 2.3, 3.5])
         assert samples[0] == 0
         assert samples[1] == 0
@@ -68,7 +68,7 @@ class TestPiecewiseConstantSignal:
     def test_sampling2(self):
         discontinuities = [1, 2, 5, 6]
         values = [1, 4, -2]
-        signal = Signal.piecewiseConstantSignal(discontinuities, values)
+        signal = src.signals.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample([0, 0.1, 1.2, 1.5, 1.7, 2.3, 3.5, 5.6, 6.5])
         assert samples[0] == 0
         assert samples[1] == 0
@@ -85,7 +85,7 @@ class TestPiecewiseConstantSignals:
     def test_creation(self):
         discontinuities = [[1, 2], [1.5, 4]]
         values = [[1], [-2]]
-        signals = SignalCollection.piecewiseConstantSignals(discontinuities, values)
+        signals = src.signals.piecewiseConstantSignals(discontinuities, values)
         signal_1 = signals[1]
         assert signal_1.discontinuities == [1.5, 4]
         assert signal_1.values == [-2]
@@ -93,7 +93,7 @@ class TestPiecewiseConstantSignals:
     def test_sampling(self):
         discontinuities = [[1, 2, 4, 6, 7, 8], [1.5, 4, 7, 9, 10]]
         values = [[1, 3, 4, -2, 3], [-2, 1, 3, -1]]
-        signals = SignalCollection.piecewiseConstantSignals(discontinuities, values)
+        signals = src.signals.piecewiseConstantSignals(discontinuities, values)
         signal_1 = signals[1]
 
         sample_locs = [0, 1.5, 3]
@@ -113,7 +113,7 @@ class TestLPFPCSsignal:
         discontinuities = [1, 2, 5, 6]
         values = [1, 4, -2]
         t = np.arange(0, 10, 0.1)
-        signal = Signal.piecewiseConstantSignal(discontinuities, values)
+        signal = src.signals.piecewiseConstantSignal(discontinuities, values)
         samples = signal.sample(t)
         filtered_signal = signal.low_pass_filter(omega)
         samples_filtered = filtered_signal.sample(t)
@@ -133,14 +133,14 @@ class TestBandlimitedPeriodicSignals:
     def test_signal_generation(self):
         omega = np.pi
         try:
-            signal = Signal.periodicBandlimitedSignal(1 / omega, 3, [1, 2])
+            signal = src.signals.periodicBandlimitedSignal(1 / omega, 3, [1, 2])
         except:
             return
         assert False
 
     def test_signal_generation_2(self):
         period = 1
-        signal = Signal.periodicBandlimitedSignal(period, 3, [1, -1, 3 - 1j])
+        signal = src.signals.periodicBandlimitedSignal(period, 3, [1, -1, 3 - 1j])
         t = np.arange(0, 1, 1e-3)
         samples = signal.sample(t)
         target = (
@@ -153,7 +153,7 @@ class TestBandlimitedPeriodicSignals:
 
     def test_signal_sampling(self):
         period = 3
-        signal = Signal.periodicBandlimitedSignal(period, 2, [1, 2])
+        signal = src.signals.periodicBandlimitedSignal(period, 2, [1, 2])
         time = np.arange(0, 6, 0.5)
         samples = signal.sample(time)
         assert len(samples) == len(time)
@@ -162,15 +162,15 @@ class TestBandlimitedPeriodicSignals:
 class TestMultiDimPeriodicSignal:
     def test_signal_generation(self):
         opt = {"time_domain_samples": np.random.random((4, 4, 4))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
 
         opt = {"freq_domain_samples": np.random.random((4, 4, 4))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         assert True
 
     def test_signal_sampling(self):
         opt = {"time_domain_samples": np.random.random((7, 5, 7))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         coordinates = [0, 0, 0]
         assert (
             normed_difference(
@@ -195,7 +195,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_nonint1(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 1))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         xcord, ycord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -207,7 +207,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_nonint1_2(self):
         opt = {"time_domain_samples": np.random.random((2, 4, 1))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         xcord, ycord = np.random.randint(0, 2), np.random.randint(0, 2)
         assert (
             normed_difference(
@@ -219,7 +219,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_int1_1(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 3))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         xcord, ycord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -231,7 +231,7 @@ class TestMultiDimPeriodicSignal:
 
     def test_signal_sampling_int1_2(self):
         opt = {"time_domain_samples": np.random.random((3, 3, 3))}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         xcord, tcord = np.random.randint(0, 3), np.random.randint(0, 3)
         assert (
             normed_difference(
@@ -249,7 +249,7 @@ class TestMultiDimPeriodicSignal:
             return (1 / 3**3) * np.cos(2 * np.pi / 3 * (xcord + ycord + tcord))
 
         opt = {"freq_domain_samples": FT}
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         assert normed_difference(signal.sample([1, 2, 1]), sampled(1, 2, 1)) < 1e-6
         assert normed_difference(signal.sample([1, 1, 0.1]), sampled(1, 1, 0.1)) < 1e-6
         assert normed_difference(signal.sample([0, 2.1, 1]), sampled(0, 2.1, 1)) < 1e-6
@@ -282,7 +282,7 @@ class TestMultiDimPeriodicSignal:
 
         opt = {"time_domain_samples": TD_samples}
 
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         time_sig = signal.get_time_signal([1, 2])
         print("BLA")
         print(time_sig.sample(0.8))
@@ -302,7 +302,7 @@ class TestMultiDimPeriodicSignal:
 
         opt = {"time_domain_samples": TD}
 
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         x, y, target_time = [2.8, 1.2, 4.5]
         precise_integral = signal.get_precise_integral([x, y, target_time])
         BLsig_precise_integral = signal.get_time_signal([x, y]).get_precise_integral(
@@ -321,7 +321,7 @@ class TestMultiDimPeriodicSignal:
         TD = np.random.randint(0, 20, (4, 5, 5)) / 10.0
         opt = {"time_domain_samples": TD}
 
-        signal = Video(opt)
+        signal = src.signals.Video(opt)
         time_signal = signal.get_time_signal([2, 3])
         # import pudb
         # pudb.set_trace()
@@ -375,7 +375,7 @@ class TestMultiDimPeriodicSignal:
     def get_random_video(self, VID_WIDTH, VID_HEIGHT, num_images):
         TD = np.random.random(size=(VID_HEIGHT, VID_WIDTH, num_images))
         opt = {"time_domain_samples": TD}
-        video = Video(opt)
+        video = src.signals.Video(opt)
         return video
 
     def check_fourier_symmetry(self, video):
@@ -400,7 +400,7 @@ class TestMultiDimPeriodicSignal:
 
         num_spikes = 8
 
-        signals = SignalCollection.periodicBandlimitedSignals(period=video.periods[-1])
+        signals = src.signals.periodicBandlimitedSignals(period=video.periods[-1])
         deltas = []
 
         for TEM_l in TEM_locations:

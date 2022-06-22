@@ -1,7 +1,10 @@
-from src import *
+import copy
+import scipy.linalg
+import src.signals.signal
+from src.signals import *
 
 
-class SignalCollection(object):
+class signalCollection(object):
     """
     Collection of multiple signals of the same type
 
@@ -56,7 +59,7 @@ class SignalCollection(object):
     n_signals = property(get_n_signals)
 
 
-class periodicBandlimitedSignals(SignalCollection):
+class periodicBandlimitedSignals(signalCollection):
     """
     Collection of periodic bandlimited signals formed of sums of complex
     exponentials
@@ -97,7 +100,7 @@ class periodicBandlimitedSignals(SignalCollection):
             len(coefficient_values) if coefficient_values is not None else 0
         )
         self._signals = [
-            Signal.periodicBandlimitedSignal(
+            src.signals.signal.periodicBandlimitedSignal(
                 period, n_components, coefficient_values[n]
             )
             for n in range(self._n_signals)
@@ -151,7 +154,7 @@ class periodicBandlimitedSignals(SignalCollection):
     coefficient_values = property(get_coefficients)
 
 
-class bandlimitedSignals(SignalCollection):
+class bandlimitedSignals(signalCollection):
     """
     Collection of bandlimited signals formed of sums of sincs
 
@@ -182,7 +185,7 @@ class bandlimitedSignals(SignalCollection):
         """
         self._n_signals = len(sinc_amps) if sinc_amps is not None else 0
         self._signals = [
-            Signal.bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
+            src.signals.bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
             for n in range(self._n_signals)
         ]
         self._sinc_locs = np.array(sinc_locs) if sinc_locs is not None else []
@@ -254,7 +257,7 @@ class bandlimitedSignals(SignalCollection):
     omega = property(get_omega)
 
 
-class piecewiseConstantSignals(SignalCollection):
+class piecewiseConstantSignals(signalCollection):
     """
     Collection of piecewise constant signals
 
@@ -275,7 +278,7 @@ class piecewiseConstantSignals(SignalCollection):
         self._values = values
         self._n_signals = len(discontinuities)
         self._signals = [
-            Signal.piecewiseConstantSignal(discontinuities[n], values[n])
+            src.signals.piecewiseConstantSignal(discontinuities[n], values[n])
             for n in range(self._n_signals)
         ]
 

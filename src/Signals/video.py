@@ -1,4 +1,5 @@
-from src import*
+from src.signals import *
+from src.helpers.complex_tensor_constraints import complex_tensor_constraints
 
 class Video(MultiDimPeriodicSignal):
 
@@ -15,7 +16,7 @@ class Video(MultiDimPeriodicSignal):
             axis=tuple([i for i in range(self.numDimensions - 1)]),
         )
         time_components_reshuffled = np.roll(time_components, int(self.periods[-1] / 2))
-        return Signal.periodicBandlimitedSignal(
+        return src.signals.periodicBandlimitedSignal(
             self.periods[-1], self.n_t_components, time_components_reshuffled
         )
 
