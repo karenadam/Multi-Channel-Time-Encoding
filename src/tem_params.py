@@ -96,7 +96,13 @@ class TEMParams(object):
     b = property(getB, setB)
 
     def __getitem__(self, item):
-        return TEMParams(self.kappa[item], self.delta[item], self.b[item], self.mixing_matrix[item,:], self.integrator_init[item])
+        return TEMParams(
+            self.kappa[item],
+            self.delta[item],
+            self.b[item],
+            self.mixing_matrix[item, :],
+            self.integrator_init[item],
+        )
 
     def __repr__(self):
         return (

@@ -81,20 +81,31 @@ class DiscreteEncoder(Encoder):
             sampled = signal.sample(np.arange(0, signal_end_time, delta_t))
         else:
             sampled = signal
-        time = np.arange(0,signal_end_time, delta_t)
+        time = np.arange(0, signal_end_time, delta_t)
 
-        weighted_biased_integral = (self.mixing_matrix.dot(np.cumsum(np.atleast_2d(sampled), 1)*delta_t)+ np.outer(self._b,time)).T/np.array(self._kappa) + np.array(self._integrator_init) +self._delta
-        moduloed_integral_quotient = np.floor_divide(weighted_biased_integral, 2*np.array(self._delta)).T
+        weighted_biased_integral = (
+            (
+                self.mixing_matrix.dot(np.cumsum(np.atleast_2d(sampled), 1) * delta_t)
+                + np.outer(self._b, time)
+            ).T
+            / np.array(self._kappa)
+            + np.array(self._integrator_init)
+            + self._delta
+        )
+        moduloed_integral_quotient = np.floor_divide(
+            weighted_biased_integral, 2 * np.array(self._delta)
+        ).T
 
         for ch in range(self.n_channels):
-            unique_indices = np.unique(moduloed_integral_quotient[ch,:], return_index=True)[1][1:]
-            if (np.diff(unique_indices)<0).any():
+            unique_indices = np.unique(
+                moduloed_integral_quotient[ch, :], return_index=True
+            )[1][1:]
+            if (np.diff(unique_indices) < 0).any():
                 raise ValueError("Your delta_t is too large")
             spikes.add(ch, time[unique_indices].tolist())
         if self.with_integral_probe:
             return spikes, moduloed_integral_remainder
         return spikes
-
 
 
 class ContinuousEncoder(Encoder):
@@ -147,7 +158,9 @@ class ContinuousEncoder(Encoder):
         self.__dict__.update(self.params.__dict__)
 
         discrete_encoder = DiscreteEncoder(self.params)
-        approx_spikes = discrete_encoder.encode(x_param, signal_end_time, (2*np.pi/x_param[0].max_frequency)/10)
+        approx_spikes = discrete_encoder.encode(
+            x_param, signal_end_time, (2 * np.pi / x_param[0].max_frequency) / 10
+        )
 
         y_param = x_param.get_mixed_signals(self.mixing_matrix)
         spikes = SpikeTimes(self.n_channels)
@@ -155,11 +168,24 @@ class ContinuousEncoder(Encoder):
             last_spike = 0
             spikes_of_ch = approx_spikes[ch]
             for s in spikes_of_ch:
+
                 def fun(curr_spike):
                     integral = y_param[ch].get_precise_integral(last_spike, curr_spike)
-                    weighted_integral = (integral + self._b[ch] * (curr_spike - last_spike)) / self._kappa[ch]
-                    return (2 * self._delta[ch] - weighted_integral)**2
-                next_spike = scipy.optimize.minimize(fun, s, bounds = [(s-(2*np.pi/x_param[0].max_frequency)/100, s+(2*np.pi/x_param[0].max_frequency)/100)]).x[0]
+                    weighted_integral = (
+                        integral + self._b[ch] * (curr_spike - last_spike)
+                    ) / self._kappa[ch]
+                    return (2 * self._delta[ch] - weighted_integral) ** 2
+
+                next_spike = scipy.optimize.minimize(
+                    fun,
+                    s,
+                    bounds=[
+                        (
+                            s - (2 * np.pi / x_param[0].max_frequency) / 100,
+                            s + (2 * np.pi / x_param[0].max_frequency) / 100,
+                        )
+                    ],
+                ).x[0]
                 spikes.add(ch, next_spike)
                 last_spike = next_spike
         return spikes
