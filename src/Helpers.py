@@ -1,5 +1,4 @@
 import numpy as np
-from src import *
 
 
 def sinc(t, Omega):

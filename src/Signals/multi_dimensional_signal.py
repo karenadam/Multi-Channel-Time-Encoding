@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-from src import *
 
 
 class _MultiDimSignal(object):
@@ -76,7 +75,6 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
     def __set_fs_components(self):
         self.fs_components = np.roll(self.freq_domain_samples, self.n_t_components, -1)
 
-
     def _get_exponential_nD_factor(self, coordinates, nD):
         component_nD = coordinates[nD] * self.dim_frequencies[nD]
         component_direction_vector = np.ones((self.numDimensions)).astype(int)
@@ -93,5 +91,3 @@ class MultiDimPeriodicSignal(_MultiDimSignal):
         exponentials = self._get_exponentials_vector(coordinates)
         weighted_exponentials = np.multiply(self.freq_domain_samples, exponentials)
         return np.real(1 / (np.product(self.periods)) * np.sum(weighted_exponentials))
-
-

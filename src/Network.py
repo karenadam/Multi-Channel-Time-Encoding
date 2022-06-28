@@ -1,5 +1,5 @@
 import numpy as np
-from src import *
+# from src import *
 
 
 class Network(object):

@@ -32,16 +32,13 @@ class TestTimeEncoderPeriodicWithStructure:
             signals, time[-1]
         )
 
-        assert (
-            np.mean(
-                np.abs(
-                    spikes_single.get_spikes_of(0)
-                    - spikes_single_precise.get_spikes_of(0)
-                )
-                / np.abs(spikes_single.get_spikes_of(0))
-            )
-            < 1e-3
+        spikes_single_precise = encoder.ContinuousEncoder(tem_params).encode_with_disc_hot_start(
+            signals, time[-1]
         )
+
+        print(spikes_single[0])
+        print(spikes_single_precise[0])
+        assert np.allclose(spikes_single[0], spikes_single_precise[0], atol = 1e-3)
 
     def test_ss_sc_q_generation(self):
         kappa = 1

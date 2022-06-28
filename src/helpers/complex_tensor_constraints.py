@@ -4,7 +4,6 @@ import src.helpers
 from src import *
 
 
-
 class complex_vector_constraints(object):
     """
     Can return constraints on a complex vector which
@@ -118,9 +117,7 @@ class complex_tensor_constraints(object):
         op_i = np.zeros(self.shape)
         op_i[indices] = 1
         flat_op_i = np.atleast_2d(
-            np.concatenate(
-                [op_i.flatten(), np.zeros((np.product(self.shape)))]
-            )
+            np.concatenate([op_i.flatten(), np.zeros((np.product(self.shape)))])
         )
         return flat_op_i
 
@@ -149,14 +146,10 @@ class complex_tensor_constraints(object):
         op_i[indices_2] -= 1
 
         flat_real_op_i = np.atleast_2d(
-            np.concatenate(
-                [np.zeros((np.product(self.shape))), op_i.flatten()]
-            )
+            np.concatenate([np.zeros((np.product(self.shape))), op_i.flatten()])
         )
         flat_imag_op_i = np.atleast_2d(
-            np.concatenate(
-                [op_i.flatten(), np.zeros((np.product(self.shape)))]
-            )
+            np.concatenate([op_i.flatten(), np.zeros((np.product(self.shape)))])
         )
         return np.concatenate([flat_real_op_i, flat_imag_op_i])
 
@@ -184,19 +177,15 @@ class complex_tensor_constraints(object):
             self.shape, [indices_1, indices_2]
         )
 
-        real_op_i =src.helpers.kernels.indicator_matrix(
+        real_op_i = src.helpers.kernels.indicator_matrix(
             self.shape, [indices_1]
         ) - src.helpers.kernels.indicator_matrix(self.shape, [indices_2])
 
         flat_real_op_i = np.atleast_2d(
-            np.concatenate(
-                [np.zeros((np.product(self.shape))), real_op_i.flatten()]
-            )
+            np.concatenate([np.zeros((np.product(self.shape))), real_op_i.flatten()])
         )
         flat_imag_op_i = np.atleast_2d(
-            np.concatenate(
-                [imag_op_i.flatten(), np.zeros((np.product(self.shape)))]
-            )
+            np.concatenate([imag_op_i.flatten(), np.zeros((np.product(self.shape)))])
         )
 
         return np.concatenate([flat_real_op_i, flat_imag_op_i])

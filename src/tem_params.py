@@ -1,5 +1,4 @@
 import numpy as np
-from src import *
 
 
 class TEMParams(object):
@@ -35,7 +34,7 @@ class TEMParams(object):
         delta,
         b,
         mixing_matrix,
-        integrator_init=[],
+        integrator_init=None,
     ):
         """
         Makes sure all parameters have the right shapes before initializing
@@ -61,7 +60,7 @@ class TEMParams(object):
         self.n_channels = self.mixing_matrix.shape[0]
         self._kappa = self._check_dimensions(kappa)
         self._delta = self._check_dimensions(delta)
-        if len(integrator_init) > 0:
+        if integrator_init is not None:
             self._integrator_init = self._check_dimensions(integrator_init)
         else:
             self._integrator_init = [-self.delta[l] for l in range(self.n_channels)]
@@ -95,6 +94,9 @@ class TEMParams(object):
     delta = property(getDelta, setDelta)
     integrator_init = property(getIntegratorInit, setIntegratorInit)
     b = property(getB, setB)
+
+    def __getitem__(self, item):
+        return TEMParams(self.kappa[item], self.delta[item], self.b[item], self.mixing_matrix[item,:], self.integrator_init[item])
 
     def __repr__(self):
         return (

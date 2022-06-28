@@ -1,8 +1,9 @@
+import scipy.sparse.linalg
 from src.signals import *
 from src.helpers.complex_tensor_constraints import complex_tensor_constraints
 
-class Video(MultiDimPeriodicSignal):
 
+class Video(MultiDimPeriodicSignal):
     def get_time_signal(self, space_coordinates):
         assert len(space_coordinates) == self.numDimensions - 1
         coordinates_t_0 = copy.deepcopy(space_coordinates)
@@ -19,7 +20,6 @@ class Video(MultiDimPeriodicSignal):
         return src.signals.periodicBandlimitedSignal(
             self.periods[-1], self.n_t_components, time_components_reshuffled
         )
-
 
     def _get_integral_frequency_domain_factors(self, coordinates):
         factors_shape = [1] * (self.numDimensions - 1)
@@ -50,7 +50,6 @@ class Video(MultiDimPeriodicSignal):
             / (np.product(self.periods))
             * np.sum(np.multiply(self.freq_domain_samples, integral_op))
         )
-
 
     def get_coefficients_from_integrals(
         self, integral_start_coordinates, integral_end_coordinates, integrals
@@ -91,6 +90,7 @@ class Video(MultiDimPeriodicSignal):
         coefficients_imag_real = np.linalg.lstsq(
             linear_operator, augmented_integrals, rcond=1e-12
         )[0]
+        # coefficients_imag_real = scipy.sparse.linalg.lsmr(linear_operator, np.real(augmented_integrals))[0]
         coefficients = (
             coefficients_imag_real[np.product(self.num_components) :]
             - 1j * coefficients_imag_real[: np.product(self.num_components)]

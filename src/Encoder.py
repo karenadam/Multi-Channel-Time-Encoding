@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.optimize
 import bisect
 from src import *
 
@@ -80,56 +81,20 @@ class DiscreteEncoder(Encoder):
             sampled = signal.sample(np.arange(0, signal_end_time, delta_t))
         else:
             sampled = signal
-        input_signal = self.mixing_matrix.dot(np.atleast_2d(sampled))
-        if self.with_integral_probe:
-            integrator_output = np.zeros((self.n_channels, max(signal.shape)))
+        time = np.arange(0,signal_end_time, delta_t)
+
+        weighted_biased_integral = (self.mixing_matrix.dot(np.cumsum(np.atleast_2d(sampled), 1)*delta_t)+ np.outer(self._b,time)).T/np.array(self._kappa) + np.array(self._integrator_init) +self._delta
+        moduloed_integral_quotient = np.floor_divide(weighted_biased_integral, 2*np.array(self._delta)).T
+
         for ch in range(self.n_channels):
-            spike_times, run_sum = self.encode_channel(input_signal, ch, delta_t)
-            spikes.add(ch, spike_times)
-            if self.with_integral_probe:
-                integrator_output[ch, :] = run_sum
+            unique_indices = np.unique(moduloed_integral_quotient[ch,:], return_index=True)[1][1:]
+            if (np.diff(unique_indices)<0).any():
+                raise ValueError("Your delta_t is too large")
+            spikes.add(ch, time[unique_indices].tolist())
         if self.with_integral_probe:
-            return spikes, integrator_output
+            return spikes, moduloed_integral_remainder
         return spikes
 
-    def encode_channel(self, input_signal, ch, delta_t):
-        """
-        performs the encoding of the input signals at channel ch of the encoder
-        with a spike time output that is generated according to an integrate-
-        and-fire time encoding scheme
-
-        PARAMETERS
-        ----------
-        input_signal: np.ndarray
-            sampled version of signal(s) to be encoded
-        ch: int
-            index of the channel of interest
-        delta_t: float
-            time step for integration
-
-        RETURNS
-        -------
-        list
-            list of floats representing the spike times of the channel
-        np.ndarray
-            output of integrator throughout the encoding scheme
-        """
-        spike_locations = []
-        spike_times = []
-        input_to_ch = input_signal[ch, :]
-        run_sum = np.cumsum(delta_t * (input_to_ch + self._b[ch])) / self._kappa[ch]
-        thresh = self._delta[ch] - self._integrator_init[ch]
-        nextpos = bisect.bisect_left(run_sum, thresh)
-        while nextpos != len(input_to_ch):
-            spike_locations.append(nextpos)
-            spike_times.append(float(nextpos * delta_t))
-            thresh = thresh + 2 * self._delta[ch]
-            nextpos = bisect.bisect_left(run_sum, thresh)
-        if self.with_integral_probe:
-            run_sum += self._integrator_init[ch]
-            for spike_loc in spike_locations:
-                run_sum[spike_loc:] -= 2 * self._delta[ch]
-        return spike_times, run_sum
 
 
 class ContinuousEncoder(Encoder):
@@ -144,75 +109,9 @@ class ContinuousEncoder(Encoder):
     tem_parameters: TEMParams
         holds the parameters of this object
     with_integral_probe: bool
-        determines whether or not this encode has access to the output
+        determines whether or not this encoder has access to the output
         of the integrator(s) (True) as well, or just the spike times (False)
     """
-
-    def encode_single_channel_precise(
-        self,
-        signal,
-        signal_end_time,
-        ch,
-        tolerance=1e-6,
-        with_start_time=False,
-    ):
-        """
-        performs the encoding of the input signals at channel ch of the encoder
-        with a spike time output that is generated according to an integrate-
-        and-fire time encoding scheme
-
-        PARAMETERS
-        ----------
-        signal: Signal.signalCollection
-            signal(s) to be encoded
-        signal_end_time: float
-            time at which encoding should stop
-        ch: int
-            index of the channel of interest
-        tolerance: float
-            tolerated error on the spike timess
-        with_start_time: bool
-            determines whether or not the starting time of the time encoding
-            is included as the first spike time
-
-        RETURNS
-        -------
-        list
-            list of floats representing the spike times of the channel
-        """
-        z = [0]
-        prvs_integral = 0
-        current_int_end = signal_end_time
-        upp_int_bound = signal_end_time
-        low_int_bound = 0
-        if signal_end_time == 0:
-            return []
-        while z[-1] < signal_end_time:
-            si = (
-                signal.get_precise_integral(z[-1], current_int_end)
-                + (current_int_end - z[-1]) * self._b[ch]
-            ) / self._kappa[ch]
-            if len(z) == 1:
-                si = si + (self._integrator_init[ch] + self._delta[ch])
-            if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
-                z.append(current_int_end)
-                low_int_bound = current_int_end
-                upp_int_bound = signal_end_time
-                current_int_end = signal_end_time
-            elif si > 2 * self._delta[ch]:
-                upp_int_bound = current_int_end
-                current_int_end = (low_int_bound + current_int_end) / 2
-            else:
-                low_int_bound = current_int_end
-                current_int_end = (current_int_end + upp_int_bound) / 2
-            if (
-                signal.get_precise_integral(z[-1], signal_end_time)
-                + (signal_end_time - z[-1]) * self._b[ch]
-            ) / self._kappa[ch] < 2 * self._delta[ch]:
-                break
-            prvs_integral = si
-
-        return z if with_start_time else z[1:]
 
     def encode(
         self,
@@ -247,16 +146,20 @@ class ContinuousEncoder(Encoder):
 
         self.__dict__.update(self.params.__dict__)
 
+        discrete_encoder = DiscreteEncoder(self.params)
+        approx_spikes = discrete_encoder.encode(x_param, signal_end_time, (2*np.pi/x_param[0].max_frequency)/10)
+
         y_param = x_param.get_mixed_signals(self.mixing_matrix)
         spikes = SpikeTimes(self.n_channels)
         for ch in range(self.n_channels):
-            signal = y_param[ch]
-            spikes_of_ch = self.encode_single_channel_precise(
-                signal,
-                signal_end_time,
-                ch,
-                tolerance,
-                with_start_time,
-            )
-            spikes.add(ch, spikes_of_ch)
+            last_spike = 0
+            spikes_of_ch = approx_spikes[ch]
+            for s in spikes_of_ch:
+                def fun(curr_spike):
+                    integral = y_param[ch].get_precise_integral(last_spike, curr_spike)
+                    weighted_integral = (integral + self._b[ch] * (curr_spike - last_spike)) / self._kappa[ch]
+                    return (2 * self._delta[ch] - weighted_integral)**2
+                next_spike = scipy.optimize.minimize(fun, s, bounds = [(s-(2*np.pi/x_param[0].max_frequency)/100, s+(2*np.pi/x_param[0].max_frequency)/100)]).x[0]
+                spikes.add(ch, next_spike)
+                last_spike = next_spike
         return spikes

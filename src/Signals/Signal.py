@@ -52,6 +52,7 @@ class periodicBandlimitedSignal(Signal):
             * np.pi
             / self.period
         )
+        self._max_frequency = max(self._frequencies)
         self.coefficients = coefficient_values
 
     def set_coefficients(self, values):
@@ -133,10 +134,23 @@ class periodicBandlimitedSignal(Signal):
             * np.exp(1j * reshaped_frequencies * t_start),
             0,
         )
+        # integral = np.sum(
+        #     reshaped_coefficients
+        #     / (1j * reshaped_frequencies)
+        #     * np.exp(1j * reshaped_frequencies * t_end)
+        #     - reshaped_coefficients
+        #     / (1j * reshaped_frequencies)
+        #     * np.exp(1j * reshaped_frequencies * t_start),
+        #     0,
+        # )
         integral += self.coefficients[self._n_components - 1] * (t_end - t_start)
         return np.real(integral)
 
+    def get_max_frequency(self):
+        return self._max_frequency
+
     coefficients = property(get_coefficients, set_coefficients)
+    max_frequency = property(get_max_frequency)
 
 
 class bandlimitedSignal(Signal):
@@ -216,8 +230,8 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                    src.helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
-                    - src.helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
+                src.helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
+                - src.helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
             ),
             1,
         )
@@ -231,9 +245,13 @@ class bandlimitedSignal(Signal):
     def get_omega(self):
         return self._Omega
 
+    def get_max_frequency(self):
+        return self._max_frequency
+
     Omega = property(get_omega)
     sinc_locs = property(get_sinc_locs)
     sinc_amps = property(get_sinc_amps)
+    max_frequency = property(get_omega)
 
 
 class piecewiseConstantSignal(Signal):
@@ -347,8 +365,10 @@ class lPFedPCSSignal(Signal):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                    src.helpers.kernels.sinc_integral(t - self.discontinuities[value_index], self.omega)
-                    - src.helpers.kernels.sinc_integral(
+                src.helpers.kernels.sinc_integral(
+                    t - self.discontinuities[value_index], self.omega
+                )
+                - src.helpers.kernels.sinc_integral(
                     t - self.discontinuities[value_index + 1], self.omega
                 )
             )

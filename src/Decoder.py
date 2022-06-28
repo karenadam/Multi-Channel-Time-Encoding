@@ -566,9 +566,7 @@ class MSignalMChannelDecoder(Decoder):
             operator_inverse.dot(flat_bwd_mixing).dot(PCS_sampler).dot(q)
         ).reshape((self.n_signals, len(self.sinc_locs)))
 
-        return src.signals.bandlimitedSignals(
-            self.Omega, self.sinc_locs, x_sinc_amps
-        )
+        return src.signals.bandlimitedSignals(self.Omega, self.sinc_locs, x_sinc_amps)
 
     def _decode_periodic(self, spikes):
         """
@@ -656,8 +654,12 @@ class MSignalMChannelDecoder(Decoder):
             integ_up_limit = spikes_of_ch[integral_index + 1]
             integ_low_limit = spikes_of_ch[integral_index]
             return np.atleast_2d(
-                helpers.kernels.sinc_integral(integ_up_limit - self.sinc_locs, self.Omega)
-                - helpers.kernels.sinc_integral(integ_low_limit - self.sinc_locs, self.Omega)
+                helpers.kernels.sinc_integral(
+                    integ_up_limit - self.sinc_locs, self.Omega
+                )
+                - helpers.kernels.sinc_integral(
+                    integ_low_limit - self.sinc_locs, self.Omega
+                )
             )
 
         return scipy.linalg.block_diag(
@@ -888,7 +890,9 @@ class UnknownMixingDecoder(Decoder):
                 components = np.arange(-self.n_components + 1, self.n_components, 1)
                 return helpers.kernels.dirichlet_component_integral(
                     end, self.period, components
-                ) - helpers.kernels.dirichlet_component_integral(start, self.period, components)
+                ) - helpers.kernels.dirichlet_component_integral(
+                    start, self.period, components
+                )
             else:
                 return helpers.kernels.sinc_integral(
                     end - self.sinc_locs, self.Omega

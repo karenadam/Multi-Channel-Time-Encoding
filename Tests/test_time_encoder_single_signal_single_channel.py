@@ -45,6 +45,35 @@ class TestTimeEncoderSingleSignalSingleChannel:
             < 1e-3
         )
 
+    def test_can_reconstruct_moduloed_encoding(self):
+        kappa = 1
+        delta = 1
+
+        omega = np.pi
+        delta_t = 1e-4
+        t = np.arange(0, 15, delta_t)
+        np.random.seed(10)
+        original = src.signals.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        y = original.sample(t)
+        b = np.max(np.abs(y)) + 1
+
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
+        spikes_single = encoder.DiscreteEncoder(tem_params).encode(
+            original, signal_end_time=15, delta_t=delta_t
+        )
+        rec_single = decoder.SSignalMChannelDecoder(
+            tem_params, periodic=False, Omega=omega
+        ).decode(spikes_single, t)
+        start_index = int(len(y) / 10)
+        end_index = int(len(y) * 9 / 10)
+
+        assert (
+            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
+            < 1e-3
+        )
+
     def test_can_reconstruct_standard_encoding_2(self):
         kappa = 1
         delta = 1
@@ -110,3 +139,7 @@ class TestTimeEncoderSingleSignalSingleChannel:
             np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
+
+if __name__=="__main__":
+    TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_standard_encoding()
+    TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_moduloed_encoding()
