@@ -44,16 +44,10 @@ class TestTimeEncoderMultiSignalMultiChannel:
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
 
-        assert (
-            np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
-            / np.mean(y[0, :] ** 2)
-            < 1e-3
-        )
-        assert (
-            np.mean(((rec_mult[1, :] - y[1, :]) ** 2)[start_index:end_index])
-            / np.mean(y[0, :] ** 2)
-            < 1e-3
-        )
+        print(rec_mult[:,start_index:end_index])
+        print(y[:, start_index:end_index])
+
+        assert np.allclose(rec_mult[:,start_index:end_index], y[:, start_index:end_index], atol = 1e-2)
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot(self):
         kappa = [1, 1, 1]

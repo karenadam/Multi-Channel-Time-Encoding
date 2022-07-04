@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 
+
 sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
@@ -28,7 +29,7 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 13)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 120)
         tem_params.mixing_matrix = np.eye(2)
         print(spikes_mult.get_total_num_spike_diffs())
 
@@ -36,14 +37,18 @@ class TestLearningWorksOneExample:
         recovered_f_s_coefficients = single_layer.get_preactivation_fsc(
             spikes_mult, 10, period, real_f_s=True
         )
+        print(recovered_f_s_coefficients -np.array(A).dot(np.array(signals.coefficient_values)))
+        # print( np.array(A).dot(np.array(signals.coefficient_values)))
         assert np.allclose(
             recovered_f_s_coefficients,
             np.array(A).dot(np.array(signals.coefficient_values)),
-            atol=1e-3,
+            atol=2e-2,
+            rtol = 2e-2
         )
 
     def test_2_by_2_can_recover_complex_f_s_coefficients(self):
         int_shift = [-1, -0.1]
+        # int_shift = [-1,-1]
         period = 10
         n_components = 10
 
@@ -70,11 +75,14 @@ class TestLearningWorksOneExample:
         )
         A = [[0.9, 0.1], [0.2, 0.8]]
 
-        tem_params = TEMParams(1, 1, 1, A, int_shift)
+        # tem_params = TEMParams(1, 1, 1, mixing_matrix=A, integrator_init=int_shift)
+        tem_params = TEMParams(1,1,1, A, int_shift)
 
-        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 30)
-        tem_params.mixing_matrix = np.eye(2)
-        print(spikes_mult.get_total_num_spike_diffs())
+        spikes_mult_bkp = encoder.ContinuousEncoder(tem_params).encode_bkp(signals, 50)
+        print(spikes_mult_bkp)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 50)
+        print(spikes_mult)
+
 
         single_layer = Layer(2, 2)
         recovered_f_s_coefficients = single_layer.get_preactivation_fsc(
@@ -86,6 +94,7 @@ class TestLearningWorksOneExample:
             recovered_f_s_coefficients,
             np.array(A).dot(np.array(signals.coefficient_values)),
             atol=1e-2,
+            rtol = 1e-2
         )
 
     def test_2_by_2_can_find_fri_f_s_coeffs(self):
@@ -142,7 +151,7 @@ class TestLearningWorksOneExample:
     def test_2_by_2_can_find_spike_times(self):
         int_shift = [-1, -0.1]
         period = 3.5
-        n_components = 8
+        n_components = 8 + 1
 
         K = 8
         num_diracs_per_signal = 4
@@ -176,13 +185,16 @@ class TestLearningWorksOneExample:
 
         tem_params = TEMParams(1, 1, 1, A, int_shift)
 
-        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 50)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, 60)
         tem_params.mixing_matrix = np.eye(2)
 
         single_layer = Layer(2, 2)
         spike_times = single_layer.learn_spike_input_and_weight_matrix_from_one_example(
             spikes_mult, n_components, period
         )
+        print(spike_times)
+        print(np.sort(t_k))
+
         assert np.allclose(np.sort(spike_times), np.sort(t_k), atol=1e-2)
 
     # def test_4_signals_can_find_spike_times(self):
@@ -233,13 +245,14 @@ class TestLearningWorksOneExample:
     def test_2_by_2_can_find_weights_multi(self):
         int_shift = [-1, -0.1]
         period = 3.5
-        n_components = 8
+        n_components = 8 + 1
 
         K = 8
         num_diracs_per_signal = 4
         np.random.seed(53)
 
         spikes_mult = []
+        spikes_new_encode = []
 
         n_examples = 2
         t_k = []
@@ -275,12 +288,25 @@ class TestLearningWorksOneExample:
                 )
             )
             A = [[0.9, 0.1], [0.2, 0.8]]
+            # A = [[1,0],[0,1]]
 
             tem_params = TEMParams(1, 1, 1, A, int_shift)
 
             spikes_mult.append(
                 encoder.ContinuousEncoder(tem_params).encode(signals, 50)
             )
+
+            spikes_new_encode.append(
+                encoder.ContinuousEncoder(tem_params).encode_bkp(signals, 50)
+            )
+
+        # assert False
+        for n in range(2):
+            for m in range(2):
+                assert np.allclose(spikes_mult[n][m],spikes_new_encode[n][m])
+
+
+        # spikes_mult = [s.corrupt_with_gaussian(1e-4) for s in spikes_mult]
 
         single_layer = Layer(2, 2)
         spike_times = (
@@ -301,3 +327,7 @@ class TestLearningWorksOneExample:
         # Need to find a way to merge two coinciding times together, otherwise comparison is not fair..
         # and to compare weight matrices
         # assert np.allclose(np.sort(spike_times), np.sort(t_k), atol=1e-2)
+
+
+if __name__=="__main__":
+    TestLearningWorksOneExample().test_2_by_2_can_recover_complex_f_s_coefficients()

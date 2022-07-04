@@ -31,13 +31,6 @@ class TestTimeEncoderPeriodicWithStructure:
         spikes_single_precise = encoder.ContinuousEncoder(tem_params).encode(
             signals, time[-1]
         )
-
-        spikes_single_precise = encoder.ContinuousEncoder(tem_params).encode_with_disc_hot_start(
-            signals, time[-1]
-        )
-
-        print(spikes_single[0])
-        print(spikes_single_precise[0])
         assert np.allclose(spikes_single[0], spikes_single_precise[0], atol = 1e-3)
 
     def test_ss_sc_q_generation(self):
@@ -64,7 +57,7 @@ class TestTimeEncoderPeriodicWithStructure:
 
     def test_ss_sc_bl_decoding(self):
         kappa = 1
-        delta = 0.5
+        delta = 0.4
         b = 2
         period = 3
         n_components = 3
@@ -72,18 +65,15 @@ class TestTimeEncoderPeriodicWithStructure:
         time = np.arange(0, 3, delta_t)
 
         signal = src.signals.periodicBandlimitedSignal(period, n_components, [1, 2, -1])
-        total_integral = signal.get_precise_integral(0, 3)
         signals = src.signals.periodicBandlimitedSignals(
             period, coefficient_values=[]
         )
         signals.add(signal)
         tem_params = TEMParams(
-            kappa, delta, b, mixing_matrix=[[1]], integrator_init=[delta]
+            kappa, delta, b, mixing_matrix=[[1]],
         )
-        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signals, period)
+        spikes_single = encoder.ContinuousEncoder(tem_params).encode_bkp(signals, period)
         y = signal.sample(time)
-
-        spikes = SpikeTimes(n_channels=1)
 
         rec_single = decoder.SSignalMChannelDecoder(
             tem_params, periodic=True, period=period, n_components=n_components
@@ -91,11 +81,10 @@ class TestTimeEncoderPeriodicWithStructure:
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
-        assert (
-            np.mean(((np.real(rec_single) - np.real(y)) ** 2)[start_index:end_index])
-            / np.mean(np.real(y) ** 2)
-            < 1e-3
-        )
+        print(np.real(rec_single)[start_index:end_index])
+        print(np.real(y)[start_index:end_index])
+        assert np.allclose(np.real(rec_single)[start_index:end_index], np.real(y)[start_index:end_index], atol = 1e-2, rtol = 1e-2 )
+
 
     def test_ss_2c_bl_decoding(self):
         kappa = 1
@@ -115,7 +104,7 @@ class TestTimeEncoderPeriodicWithStructure:
         tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1], [1]], integrator_init=[-delta, 0]
         )
-        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signals, period)
+        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signals, period+1)
         y = signal.sample(time)
 
         spikes = SpikeTimes(n_channels=1)
@@ -129,11 +118,8 @@ class TestTimeEncoderPeriodicWithStructure:
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
-        assert (
-            np.mean(((np.real(rec_single) - np.real(y)) ** 2)[start_index:end_index])
-            / np.mean(np.real(y) ** 2)
-            < 1e-3
-        )
+        assert np.allclose(np.real(rec_single[start_index:end_index]), np.real(y)[start_index:end_index], atol = 3e-2, rtol = 1e-2)
+
 
     def test_2s_3c_bl_decoding(self):
         kappa = 1
@@ -154,7 +140,7 @@ class TestTimeEncoderPeriodicWithStructure:
         tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1, -2], [1, 0.5], [0.1, 0.7]]
         )
-        spikes = encoder.ContinuousEncoder(tem_params).encode(signals, period)
+        spikes = encoder.ContinuousEncoder(tem_params).encode(signals, period+0.5)
         y = signal.sample(time)
 
         rec = decoder.MSignalMChannelDecoder(
@@ -163,11 +149,7 @@ class TestTimeEncoderPeriodicWithStructure:
         start_index = int(len(y) / 10)
         end_index = int(len(y) * 9 / 10)
 
-        assert (
-            np.mean(((np.real(rec[0, :]) - np.real(y)) ** 2)[start_index:end_index])
-            / np.mean(np.real(y) ** 2)
-            < 1e-3
-        )
+        assert np.allclose(np.real(rec[0,start_index:end_index]), np.real(y)[start_index:end_index], atol = 1e-2, rtol = 1e-2)
 
 
 class TestTimeEncoderBandlimitedPeriodicWithStructure:

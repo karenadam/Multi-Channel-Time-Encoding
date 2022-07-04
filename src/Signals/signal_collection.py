@@ -56,7 +56,14 @@ class signalCollection(object):
     def get_n_signals(self):
         return self._n_signals
 
+    def get_max_frequency(self):
+        if self._n_signals>0:
+            return self._signals[0].max_frequency
+        else:
+            return 0
+
     n_signals = property(get_n_signals)
+    max_frequency = property(get_max_frequency)
 
 
 class periodicBandlimitedSignals(signalCollection):

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.linalg
+import scipy.stats
 import src.signals.fri_signal
 from src.helpers.complex_tensor_constraints import complex_vector_constraints
 import copy
@@ -149,7 +150,8 @@ class Layer(object):
         ]
 
         measurement_matrices = [
-            (np.array(input.coefficient_values).dot(integ)).T for integ in integrals
+            np.real(np.array(input.coefficient_values).dot(integ)).T
+            for integ in integrals
         ]
 
         return measurement_matrices, measurement_results
@@ -184,9 +186,9 @@ class Layer(object):
             *measurement_matrices
         )
         concatenated_results = np.concatenate(measurement_results)
-        return np.linalg.lstsq(block_diagonal_measurement_matrix, concatenated_results)[
-            0
-        ].reshape((self.num_outputs, self.num_inputs))
+        return np.linalg.lstsq(
+            block_diagonal_measurement_matrix, concatenated_results, rcond=None
+        )[0].reshape((self.num_outputs, self.num_inputs))
 
     def learn_weight_matrix_from_one_ex(
         self, input: src.signals.signalCollection, spike_times: spike_times
@@ -395,9 +397,19 @@ class Layer(object):
             spike_times, n_fsc, period
         )
 
-        self.set_weight_matrix(
-            sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T
-        )
+
+        (
+            centroids,
+            labels,
+            coefficients,
+            recovered_times,
+            num_diracs,
+        ) = self._cluster_according_to_dirac_coeffs(coefficients, [recovered_times])
+
+        self.set_weight_matrix(centroids)
+        # self.set_weight_matrix(
+        #     sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T
+        # )
         return recovered_times
 
     def get_diracs_from_spikes(
@@ -476,19 +488,46 @@ class Layer(object):
         ]
         dirac_times = [d_p[0] for d_p in dirac_params]
         dirac_coeffs = np.concatenate([d_p[1] for d_p in dirac_params], axis=0)
-        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+
+        (
+            centroids,
+            labels,
+            dirac_coeffs,
+            dirac_times,
+            num_diracs,
+        ) = self._cluster_according_to_dirac_coeffs(dirac_coeffs, dirac_times)
+
         self.set_weight_matrix(copy.deepcopy(centroids.T))
 
         def get_prvs_layer_spikes(example_index, input_neuron_index):
-            example_labels = labels[example_index * n_fsc : (example_index + 1) * n_fsc]
-            return dirac_times[example_index][
-                np.where(example_labels == input_neuron_index)
+            example_labels = labels[
+                example_index * num_diracs : (example_index + 1) * num_diracs
             ]
+            dirac_times_to_return = []
+            for i_d in range(len(dirac_times[example_index])):
+                if example_labels[i_d] == input_neuron_index:
+                    dirac_times_to_return.append(dirac_times[example_index][i_d])
+            return dirac_times_to_return
 
         return [
             [get_prvs_layer_spikes(n_e, n_i) for n_i in range(self.num_inputs)]
             for n_e in range(n_examples)
         ]
+
+    def _cluster_according_to_dirac_coeffs(self, dirac_coeffs, dirac_times):
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+        error = np.linalg.norm(dirac_coeffs - centroids[labels, :], axis=1)
+        error_zscore = scipy.stats.zscore(error)
+        indices_to_keep = np.where(error_zscore < 2)[0]
+        dirac_coeffs = dirac_coeffs[indices_to_keep]
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+
+        flattened_dirac_times = np.concatenate(dirac_times)[indices_to_keep]
+        dirac_times = np.reshape(flattened_dirac_times, (len(dirac_times), -1))
+        num_diracs = dirac_times.shape[1]
+        dirac_times = dirac_times.tolist()
+
+        return centroids, labels, dirac_coeffs, dirac_times, num_diracs
 
     def _get_preactivation_fsc_measurement_constraints(
         self,
@@ -658,7 +697,8 @@ class Layer(object):
             matrix with fourier series coefficients of input to each node of the network for
             this example
         """
-        assert spike_times.n_channels == self.num_outputs
+        if spike_times.n_channels != self.num_outputs:
+            raise ValueError("Number of output channels does not match number of outputs in layer")
 
         f_s_coefficients = np.concatenate(
             [
