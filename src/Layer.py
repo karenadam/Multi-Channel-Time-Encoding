@@ -370,9 +370,7 @@ class Layer(object):
             ],
         )
 
-    def learn_spike_input_and_weight_matrix_from_one_example(
-        self, spike_times: spike_times, n_fsc: int, period: float
-    ):
+    def learn_spike_input_and_weight_matrix_from_one_example(self, spike_times: spike_times, n_fsc: int, period: float):
         """
         simultaneously learns (and sets) the weight matrix of a layer and returns
         the input spikes that generate the output provided in the example
@@ -516,9 +514,13 @@ class Layer(object):
 
     def _cluster_according_to_dirac_coeffs(self, dirac_coeffs, dirac_times):
         centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
-        error = np.linalg.norm(dirac_coeffs - centroids[labels, :], axis=1)
-        error_zscore = scipy.stats.zscore(error)
-        indices_to_keep = np.where(error_zscore < 2)[0]
+        augmented_centroids = np.concatenate([np.zeros((1, centroids.shape[1])), centroids])
+        kmeans_object = sklearn.cluster.KMeans(n_clusters= augmented_centroids.shape[0])
+        kmeans_object.fit(augmented_centroids)
+        labels_ = kmeans_object.predict(dirac_coeffs)
+        label_to_scrap = kmeans_object.predict(augmented_centroids)[0]
+
+        indices_to_keep = np.where(labels_ != label_to_scrap)[0]
         dirac_coeffs = dirac_coeffs[indices_to_keep]
         centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
 

@@ -220,111 +220,111 @@ class ContinuousEncoder(Encoder):
                 last_spike = next_spike
         return spikes
 
-    def encode_single_channel_precise(
-        self,
-        signal,
-        signal_end_time,
-        ch,
-        tolerance=1e-6,
-        with_start_time=False,
-    ):
-        """
-        performs the encoding of the input signals at channel ch of the encoder
-        with a spike time output that is generated according to an integrate-
-        and-fire time encoding scheme
-        PARAMETERS
-        ----------
-        signal: Signal.SignalCollection
-            signal(s) to be encoded
-        signal_end_time: float
-            time at which encoding should stop
-        ch: int
-            index of the channel of interest
-        tolerance: float
-            tolerated error on the spike timess
-        with_start_time: bool
-            determines whether or not the starting time of the time encoding
-            is included as the first spike time
-        RETURNS
-        -------
-        list
-            list of floats representing the spike times of the channel
-        """
-        z = [0]
-        prvs_integral = 0
-        current_int_end = signal_end_time
-        upp_int_bound = signal_end_time
-        low_int_bound = 0
-        if signal_end_time == 0:
-            return []
-        while z[-1] < signal_end_time:
-            si = (
-                signal.get_precise_integral(z[-1], current_int_end)
-                + (current_int_end - z[-1]) * self._b[ch]
-            ) / self._kappa[ch]
-            if len(z) == 1:
-                si = si + (self._integrator_init[ch] + self._delta[ch])
-            if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
-                z.append(current_int_end)
-                low_int_bound = current_int_end
-                upp_int_bound = signal_end_time
-                current_int_end = signal_end_time
-            elif si > 2 * self._delta[ch]:
-                upp_int_bound = current_int_end
-                current_int_end = (low_int_bound + current_int_end) / 2
-            else:
-                low_int_bound = current_int_end
-                current_int_end = (current_int_end + upp_int_bound) / 2
-            if (
-                signal.get_precise_integral(z[-1], signal_end_time)
-                + (signal_end_time - z[-1]) * self._b[ch]
-            ) / self._kappa[ch] < 2 * self._delta[ch]:
-                break
-            prvs_integral = si
-
-        return z if with_start_time else z[1:]
-
-    def encode_bkp(
-        self,
-        x_param,
-        signal_end_time,
-        tolerance=1e-8,
-        with_start_time=False,
-    ):
-        """
-        performs the encoding of the input signals at channel ch of the encoder
-        with a spike time output that is generated according to an integrate-
-        and-fire time encoding scheme
-        PARAMETERS
-        ----------
-        x_param: Signal.SignalCollection
-            signal(s) to be encoded
-        signal_end_time: float
-            time at which encoding should stop
-        tolerance: float
-            tolerated error on the spike timess
-        with_start_time: bool
-            determines whether or not the starting time of the time encoding
-            is included as the first spike time
-        RETURNS
-        -------
-        SpikeTimes
-            spikeTime object holding the timing of the spikes of each of
-            the channels
-        """
-
-        self.__dict__.update(self.params.__dict__)
-
-        y_param = x_param.get_mixed_signals(self.mixing_matrix)
-        spikes = SpikeTimes(self.n_channels)
-        for ch in range(self.n_channels):
-            signal = y_param[ch]
-            spikes_of_ch = self.encode_single_channel_precise(
-                signal,
-                signal_end_time,
-                ch,
-                tolerance,
-                with_start_time,
-            )
-            spikes.add(ch, spikes_of_ch)
-        return spikes
+    # def encode_single_channel_precise(
+    #     self,
+    #     signal,
+    #     signal_end_time,
+    #     ch,
+    #     tolerance=1e-6,
+    #     with_start_time=False,
+    # ):
+    #     """
+    #     performs the encoding of the input signals at channel ch of the encoder
+    #     with a spike time output that is generated according to an integrate-
+    #     and-fire time encoding scheme
+    #     PARAMETERS
+    #     ----------
+    #     signal: Signal.SignalCollection
+    #         signal(s) to be encoded
+    #     signal_end_time: float
+    #         time at which encoding should stop
+    #     ch: int
+    #         index of the channel of interest
+    #     tolerance: float
+    #         tolerated error on the spike timess
+    #     with_start_time: bool
+    #         determines whether or not the starting time of the time encoding
+    #         is included as the first spike time
+    #     RETURNS
+    #     -------
+    #     list
+    #         list of floats representing the spike times of the channel
+    #     """
+    #     z = [0]
+    #     prvs_integral = 0
+    #     current_int_end = signal_end_time
+    #     upp_int_bound = signal_end_time
+    #     low_int_bound = 0
+    #     if signal_end_time == 0:
+    #         return []
+    #     while z[-1] < signal_end_time:
+    #         si = (
+    #             signal.get_precise_integral(z[-1], current_int_end)
+    #             + (current_int_end - z[-1]) * self._b[ch]
+    #         ) / self._kappa[ch]
+    #         if len(z) == 1:
+    #             si = si + (self._integrator_init[ch] + self._delta[ch])
+    #         if np.abs(si - prvs_integral) / np.abs(si) < tolerance:
+    #             z.append(current_int_end)
+    #             low_int_bound = current_int_end
+    #             upp_int_bound = signal_end_time
+    #             current_int_end = signal_end_time
+    #         elif si > 2 * self._delta[ch]:
+    #             upp_int_bound = current_int_end
+    #             current_int_end = (low_int_bound + current_int_end) / 2
+    #         else:
+    #             low_int_bound = current_int_end
+    #             current_int_end = (current_int_end + upp_int_bound) / 2
+    #         if (
+    #             signal.get_precise_integral(z[-1], signal_end_time)
+    #             + (signal_end_time - z[-1]) * self._b[ch]
+    #         ) / self._kappa[ch] < 2 * self._delta[ch]:
+    #             break
+    #         prvs_integral = si
+    #
+    #     return z if with_start_time else z[1:]
+    #
+    # def encode_bkp(
+    #     self,
+    #     x_param,
+    #     signal_end_time,
+    #     tolerance=1e-8,
+    #     with_start_time=False,
+    # ):
+    #     """
+    #     performs the encoding of the input signals at channel ch of the encoder
+    #     with a spike time output that is generated according to an integrate-
+    #     and-fire time encoding scheme
+    #     PARAMETERS
+    #     ----------
+    #     x_param: Signal.SignalCollection
+    #         signal(s) to be encoded
+    #     signal_end_time: float
+    #         time at which encoding should stop
+    #     tolerance: float
+    #         tolerated error on the spike timess
+    #     with_start_time: bool
+    #         determines whether or not the starting time of the time encoding
+    #         is included as the first spike time
+    #     RETURNS
+    #     -------
+    #     SpikeTimes
+    #         spikeTime object holding the timing of the spikes of each of
+    #         the channels
+    #     """
+    #
+    #     self.__dict__.update(self.params.__dict__)
+    #
+    #     y_param = x_param.get_mixed_signals(self.mixing_matrix)
+    #     spikes = SpikeTimes(self.n_channels)
+    #     for ch in range(self.n_channels):
+    #         signal = y_param[ch]
+    #         spikes_of_ch = self.encode_single_channel_precise(
+    #             signal,
+    #             signal_end_time,
+    #             ch,
+    #             tolerance,
+    #             with_start_time,
+    #         )
+    #         spikes.add(ch, spikes_of_ch)
+    #     return spikes

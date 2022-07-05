@@ -72,7 +72,7 @@ class TestTimeEncoderPeriodicWithStructure:
         tem_params = TEMParams(
             kappa, delta, b, mixing_matrix=[[1]],
         )
-        spikes_single = encoder.ContinuousEncoder(tem_params).encode_bkp(signals, period)
+        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signals, period)
         y = signal.sample(time)
 
         rec_single = decoder.SSignalMChannelDecoder(
@@ -83,7 +83,7 @@ class TestTimeEncoderPeriodicWithStructure:
 
         print(np.real(rec_single)[start_index:end_index])
         print(np.real(y)[start_index:end_index])
-        assert np.allclose(np.real(rec_single)[start_index:end_index], np.real(y)[start_index:end_index], atol = 1e-2, rtol = 1e-2 )
+        assert np.allclose(np.real(rec_single)[start_index:end_index], np.real(y)[start_index:end_index], atol = 1e-1, rtol = 1e-2 )
 
 
     def test_ss_2c_bl_decoding(self):
