@@ -92,9 +92,7 @@ class TestTimeEncoderSingleSignalSingleChannel:
 
         enc = encoder.DiscreteEncoder(tem_params)
         spikes_single = enc.encode(original, signal_end_time=15, delta_t=delta_t)
-        dec = decoder.SSignalMChannelDecoder(
-            tem_params, periodic=False, Omega=omega
-        )
+        dec = decoder.SSignalMChannelDecoder(tem_params, periodic=False, Omega=omega)
         rec_single = dec.decode(
             spikes_single,
             t,
@@ -140,6 +138,7 @@ class TestTimeEncoderSingleSignalSingleChannel:
             < 1e-3
         )
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_standard_encoding()
     TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_moduloed_encoding()

@@ -101,7 +101,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
         spikes_mult = encoder.ContinuousEncoder(tem_params).encode(
-            original, signal_end_time=25, tolerance = delta_t
+            original, signal_end_time=25, tolerance=delta_t
         )
         rec_mult = decoder.UnknownMixingDecoder(
             tem_params, periodic=True, n_components=n_components, period=period

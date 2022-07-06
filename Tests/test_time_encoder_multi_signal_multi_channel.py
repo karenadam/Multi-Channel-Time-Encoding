@@ -44,10 +44,12 @@ class TestTimeEncoderMultiSignalMultiChannel:
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
 
-        print(rec_mult[:,start_index:end_index])
+        print(rec_mult[:, start_index:end_index])
         print(y[:, start_index:end_index])
 
-        assert np.allclose(rec_mult[:,start_index:end_index], y[:, start_index:end_index], atol = 1e-2)
+        assert np.allclose(
+            rec_mult[:, start_index:end_index], y[:, start_index:end_index], atol=1e-2
+        )
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot(self):
         kappa = [1, 1, 1]
@@ -121,16 +123,18 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y[0, :] = original1.sample(t)
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
-        A =np.random.random((20,2))
+        A = np.random.random((20, 2))
         y_param = src.signals.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         y_param.add(original1)
         y_param.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A)
-        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(y_param, end_time, 1e-4)
-        spikes_mult_moduloed = encoder.DiscreteEncoder(tem_params).encode(y_param, end_time, 1e-4)
-
-
+        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(
+            y_param, end_time, 1e-4
+        )
+        spikes_mult_moduloed = encoder.DiscreteEncoder(tem_params).encode(
+            y_param, end_time, 1e-4
+        )
 
         # rec_mult = decoder.MSignalMChannelDecoder(
         #     tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
@@ -151,9 +155,6 @@ class TestTimeEncoderMultiSignalMultiChannel:
 
         # assert np.allclose(rec_mult[:,start_index:end_index], y[:,start_index:end_index], atol = 1e-3)
         # assert np.allclose(rec_mult_moduloed[:,start_index:end_index], y[:,start_index:end_index], atol = 1e-3)
-
-
-
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot_no_fixed_sinc_locs(
         self,
@@ -220,5 +221,5 @@ class TestTimeEncoderMultiSignalMultiChannel:
         assert TEM.b == [1, 1], "b was falsely assigned"
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     TestTimeEncoderMultiSignalMultiChannel().test_can_do_modulo_and_discrete_encoding_with_10_by_2_mixing_one_shot()

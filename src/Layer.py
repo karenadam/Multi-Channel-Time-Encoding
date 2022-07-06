@@ -370,7 +370,9 @@ class Layer(object):
             ],
         )
 
-    def learn_spike_input_and_weight_matrix_from_one_example(self, spike_times: spike_times, n_fsc: int, period: float):
+    def learn_spike_input_and_weight_matrix_from_one_example(
+        self, spike_times: spike_times, n_fsc: int, period: float
+    ):
         """
         simultaneously learns (and sets) the weight matrix of a layer and returns
         the input spikes that generate the output provided in the example
@@ -394,7 +396,6 @@ class Layer(object):
         recovered_times, coefficients = self.get_diracs_from_spikes(
             spike_times, n_fsc, period
         )
-
 
         (
             centroids,
@@ -429,10 +430,9 @@ class Layer(object):
         Returns
         -------
         np.ndarray
-            2D matrix where each row contains the spike times of the corresponding
-            node of the layer
+            1D list with spike time inputs that generated the spike time outputs
         np.ndarray
-            2D matrix where each row contains the spike amplitudes of the corresponding
+            2D matrix where each row contains the input spike amplitudes of the corresponding
             node of the layer
         """
 
@@ -513,22 +513,58 @@ class Layer(object):
         ]
 
     def _cluster_according_to_dirac_coeffs(self, dirac_coeffs, dirac_times):
+        """
+
+        PARAMETERS
+        ----------
+        dirac_coeffs: np.array
+            2D matrix where each row contains the coefficients of a specific dirac
+            across different inputs
+        dirac_times: list
+            list of lists with spike time inputs that generated the spike time outputs
+            for different examples
+
+        RETURNS
+        -------
+        np.array
+            centroids of dirac coefficients following kmeans algorithm (adjusted to remove
+            diracs with coefficients close to zero)
+        np.array
+            list with assignment of dirac to corresponding centroid
+        np.array
+            2D matrix where each row contains the spike amplitudes of the corresponding
+            node of the layer
+        list
+            list of lists with spike time inputs that generated the spike time outputs
+            for different examples
+        int
+            number of diracs per example
+        """
+        # TODO: here and elsewhere, we assume that all examples have the same number of diracs
+        #       need to change this to be more flexible
+
+        # get centroids assuming all dirac locations are correct
         centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
-        augmented_centroids = np.concatenate([np.zeros((1, centroids.shape[1])), centroids])
-        kmeans_object = sklearn.cluster.KMeans(n_clusters= augmented_centroids.shape[0])
+
+        # add centroid with zero amplitude and recluster
+        augmented_centroids = np.concatenate(
+            [np.zeros((1, centroids.shape[1])), centroids]
+        )
+        kmeans_object = sklearn.cluster.KMeans(n_clusters=augmented_centroids.shape[0])
         kmeans_object.fit(augmented_centroids)
         labels_ = kmeans_object.predict(dirac_coeffs)
-        label_to_scrap = kmeans_object.predict(augmented_centroids)[0]
 
+        # get rid of diracs with amplitudes close to zero
+        label_to_scrap = kmeans_object.predict(augmented_centroids)[0]
         indices_to_keep = np.where(labels_ != label_to_scrap)[0]
         dirac_coeffs = dirac_coeffs[indices_to_keep]
-        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
-
         flattened_dirac_times = np.concatenate(dirac_times)[indices_to_keep]
         dirac_times = np.reshape(flattened_dirac_times, (len(dirac_times), -1))
         num_diracs = dirac_times.shape[1]
         dirac_times = dirac_times.tolist()
 
+        # cluster again, having dropped diracs with amplitudes close to zero
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
         return centroids, labels, dirac_coeffs, dirac_times, num_diracs
 
     def _get_preactivation_fsc_measurement_constraints(
@@ -700,7 +736,9 @@ class Layer(object):
             this example
         """
         if spike_times.n_channels != self.num_outputs:
-            raise ValueError("Number of output channels does not match number of outputs in layer")
+            raise ValueError(
+                "Number of output channels does not match number of outputs in layer"
+            )
 
         f_s_coefficients = np.concatenate(
             [

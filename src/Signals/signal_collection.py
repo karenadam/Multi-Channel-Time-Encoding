@@ -57,7 +57,7 @@ class signalCollection(object):
         return self._n_signals
 
     def get_max_frequency(self):
-        if self._n_signals>0:
+        if self._n_signals > 0:
             return self._signals[0].max_frequency
         else:
             return 0

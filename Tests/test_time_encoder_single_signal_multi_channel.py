@@ -63,7 +63,10 @@ class TestTimeEncoderSingleSignalMultiChannel:
         b = np.max(np.abs(y)) + 1
 
         tem_mult = TEMParams(
-            kappa, delta, b, mixing_matrix=[[1]] * 4,
+            kappa,
+            delta,
+            b,
+            mixing_matrix=[[1]] * 4,
         )
         spikes_mult = encoder.DiscreteEncoder(tem_mult).encode(
             original, signal_end_time=20, delta_t=delta_t

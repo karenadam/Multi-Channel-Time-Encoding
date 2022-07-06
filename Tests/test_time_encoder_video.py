@@ -60,7 +60,9 @@ class TestTimeEncoderVideo:
         f_s_coefficients = get_f_s_coeffs_from_time_encoded_video(
             video, TEM_locations=TEM_locations, num_spikes=length + 2
         )
-        assert np.allclose(f_s_coefficients, video.freq_domain_samples.flatten(), atol = 1e-1, rtol = 1e-2)
+        assert np.allclose(
+            f_s_coefficients, video.freq_domain_samples.flatten(), atol=1e-1, rtol=1e-2
+        )
 
     def test_time_encode_video_oversampled_space_odd_pixel_num(self):
         np.random.seed(1)
@@ -80,7 +82,7 @@ class TestTimeEncoderVideo:
             video, TEM_locations=TEM_locations, num_spikes=length / 4 + 3
         )
         assert np.allclose(
-            f_s_coefficients, video.freq_domain_samples.flatten(),  atol = 1e-1, rtol = 1e-2
+            f_s_coefficients, video.freq_domain_samples.flatten(), atol=1e-1, rtol=1e-2
         )
 
     def test_time_encode_video_min_space_sampling_even_pixel_num(self):
@@ -91,9 +93,13 @@ class TestTimeEncoderVideo:
         t_d_samples = np.random.random((height, width, length))
         opt = {"time_domain_samples": t_d_samples}
         video = src.signals.Video(opt)
-        TEM_locations = [[v+0.1, h+0.1] for v in range(height) for h in range(width)]
+        TEM_locations = [
+            [v + 0.1, h + 0.1] for v in range(height) for h in range(width)
+        ]
         f_s_coefficients = get_f_s_coeffs_from_time_encoded_video(
             video, TEM_locations=TEM_locations, num_spikes=length + 2
         )
         print("FS ", f_s_coefficients - video.freq_domain_samples.flatten())
-        assert np.allclose(f_s_coefficients, video.freq_domain_samples.flatten(),  atol = 1e-1, rtol = 1e-2)
+        assert np.allclose(
+            f_s_coefficients, video.freq_domain_samples.flatten(), atol=1e-1, rtol=1e-2
+        )

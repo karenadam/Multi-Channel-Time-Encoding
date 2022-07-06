@@ -398,7 +398,7 @@ class TestMultiDimPeriodicSignal:
             for v in ver_loc_range:
                 TEM_locations.append([v, h])
 
-        num_spikes = 8 +1
+        num_spikes = 8 + 1
 
         signals = src.signals.periodicBandlimitedSignals(period=video.periods[-1])
         deltas = []
@@ -407,7 +407,7 @@ class TestMultiDimPeriodicSignal:
             signal_l = video.get_time_signal(TEM_l)
             signals.add(signal_l)
             deltas.append(
-                signal_l.get_precise_integral(0, video.periods[-1]) / (2 * num_spikes )
+                signal_l.get_precise_integral(0, video.periods[-1]) / (2 * num_spikes)
             )
 
         kappa, b = 1, 0
@@ -433,7 +433,12 @@ class TestMultiDimPeriodicSignal:
         )
         coefficients = np.reshape(coefficients, video.num_components)
 
-        assert np.allclose(coefficients.flatten(), video.freq_domain_samples.flatten(), atol = 1e-1, rtol = 1e-1)
+        assert np.allclose(
+            coefficients.flatten(),
+            video.freq_domain_samples.flatten(),
+            atol=1e-1,
+            rtol=1e-1,
+        )
 
 
 if __name__ == "__main__":

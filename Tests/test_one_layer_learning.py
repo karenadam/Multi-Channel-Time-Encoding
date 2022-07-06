@@ -33,7 +33,7 @@ class TestLearningWorksOneSignal:
         single_layer.learn_weight_matrix_from_one_ex(signals, spikes_mult)
         print(single_layer.weight_matrix)
         print(A)
-        assert np.allclose(single_layer.weight_matrix, A, atol = 1e-2, rtol = 1e-2)
+        assert np.allclose(single_layer.weight_matrix, A, atol=1e-2, rtol=1e-2)
 
     def test_one_signal_5_by_2(self):
         int_shift = [-1, -0.1]
@@ -59,7 +59,7 @@ class TestLearningWorksOneSignal:
         single_layer = Layer(2, 5)
         single_layer.learn_weight_matrix_from_one_ex(signals, spikes_mult)
 
-        assert np.allclose(single_layer.weight_matrix, A, atol = 1e-2, rtol = 1e-2)
+        assert np.allclose(single_layer.weight_matrix, A, atol=1e-2, rtol=1e-2)
 
 
 class TestLearningWorksMultiSignal:
@@ -94,7 +94,7 @@ class TestLearningWorksMultiSignal:
             [signals_1, signals_2], [spikes_mult_1, spikes_mult_2]
         )
 
-        assert np.allclose(A, single_layer.weight_matrix, atol = 1e-2, rtol = 1e-2)
+        assert np.allclose(A, single_layer.weight_matrix, atol=1e-2, rtol=1e-2)
 
     def test_multi_signal_5_by_2(self):
         int_shift = [-1, -0.1]
@@ -130,4 +130,4 @@ class TestLearningWorksMultiSignal:
         )
         print(A)
         print(single_layer.weight_matrix)
-        assert np.allclose(single_layer.weight_matrix, A, atol = 1e-2, rtol = 1e-2)
+        assert np.allclose(single_layer.weight_matrix, A, atol=1e-2, rtol=1e-2)
