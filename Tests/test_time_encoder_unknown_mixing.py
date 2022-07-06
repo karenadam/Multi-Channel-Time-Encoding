@@ -17,16 +17,16 @@ class TestTimeEncoderMultiSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original1 = Signal.bandlimitedSignal(
+        original1 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         # original1.random(t)
         np.random.seed(11)
-        original2 = Signal.bandlimitedSignal(
+        original2 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         # original2.random(t)
-        original = SignalCollection.bandlimitedSignals(
+        original = src.signals.bandlimitedSignals(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         original.add(original1)
@@ -38,10 +38,10 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8], [0.1, 0.9], [0.5, 0.5]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
+        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=25, delta_t=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(
+        rec_mult = decoder.UnknownMixingDecoder(
             tem_params, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -83,14 +83,14 @@ class TestTimeEncoderMultiSignalMultiChannel:
         np.random.seed(10)
         period = 20
         n_components = 15
-        original1 = Signal.periodicBandlimitedSignal(
+        original1 = src.signals.periodicBandlimitedSignal(
             period, n_components, np.random.random(size=(n_components)).tolist()
         )
         np.random.seed(11)
-        original2 = Signal.periodicBandlimitedSignal(
+        original2 = src.signals.periodicBandlimitedSignal(
             period, n_components, np.random.random(size=(n_components)).tolist()
         )
-        original = SignalCollection.periodicBandlimitedSignals(period)
+        original = src.signals.periodicBandlimitedSignals(period)
         original.add(original1)
         original.add(original2)
         y = np.zeros((2, len(t)), dtype="complex")
@@ -100,10 +100,10 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8], [0.1, 0.9], [0.5, 0.5]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.DiscreteEncoder(tem_params).encode(
-            original, signal_end_time=25, delta_t=delta_t
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(
+            original, signal_end_time=25, tolerance=delta_t
         )
-        rec_mult = Decoder.UnknownMixingDecoder(
+        rec_mult = decoder.UnknownMixingDecoder(
             tem_params, periodic=True, n_components=n_components, period=period
         ).decode(spikes_mult, 2, t)
 

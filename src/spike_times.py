@@ -1,4 +1,4 @@
-from src import *
+import numpy as np
 
 
 class SpikeTimes(object):
@@ -199,25 +199,25 @@ class SpikeTimes(object):
             start_ind += len(midpoints_ch)
         return (midpoints.T[0]).tolist()
 
-    def corrupt_with_gaussian(self, snr):
+    def corrupt_with_gaussian(self, noise_level):
         """
         Parameters
         ----------
-        snr: float
+        noise_level: float
             signal-to-noise ratio of added gaussian noise
 
         Returns
         -------
         SpikeTimes
             SpikeTimes object which is similar to self but where the
-            spike times are corrupted by Gaussian noise of the given SNR
+            spike times are corrupted by Gaussian noise of the given noise_level
         """
 
         corrupted_SpikeTimes = SpikeTimes(self.n_channels)
         for ch in range(self.n_channels):
             spike_dif = np.diff(self.get_spikes_of(ch))
             spike_dif_power = np.linalg.norm(spike_dif) / len(spike_dif)
-            noise_power = snr * spike_dif_power
+            noise_power = noise_level * spike_dif_power
             added_noise = np.random.normal(
                 0, noise_power, size=self.get_spikes_of(ch).shape
             ).tolist()

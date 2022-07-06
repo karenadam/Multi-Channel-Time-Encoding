@@ -1,4 +1,6 @@
-from src import *
+import numpy as np
+
+# from src import *
 
 
 class Network(object):

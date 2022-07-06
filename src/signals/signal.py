@@ -1,3 +1,7 @@
+import numpy as np
+import numpy.matlib
+import src
+import src.helpers.kernels
 from src import *
 
 
@@ -48,6 +52,7 @@ class periodicBandlimitedSignal(Signal):
             * np.pi
             / self.period
         )
+        self._max_frequency = max(self._frequencies)
         self.coefficients = coefficient_values
 
     def set_coefficients(self, values):
@@ -83,7 +88,7 @@ class periodicBandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -103,9 +108,9 @@ class periodicBandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t_start: int, list or np.ndarray
+        t_start: float or array_like
             lower bound(s) of the integral computation
-        t_end: int, list or np.ndarray
+        t_end: float or array_like
             upper bound(s) of the integral computation
 
         RETURNS
@@ -129,10 +134,23 @@ class periodicBandlimitedSignal(Signal):
             * np.exp(1j * reshaped_frequencies * t_start),
             0,
         )
+        # integral = np.sum(
+        #     reshaped_coefficients
+        #     / (1j * reshaped_frequencies)
+        #     * np.exp(1j * reshaped_frequencies * t_end)
+        #     - reshaped_coefficients
+        #     / (1j * reshaped_frequencies)
+        #     * np.exp(1j * reshaped_frequencies * t_start),
+        #     0,
+        # )
         integral += self.coefficients[self._n_components - 1] * (t_end - t_start)
         return np.real(integral)
 
+    def get_max_frequency(self):
+        return self._max_frequency
+
     coefficients = property(get_coefficients, set_coefficients)
+    max_frequency = property(get_max_frequency)
 
 
 class bandlimitedSignal(Signal):
@@ -155,9 +173,9 @@ class bandlimitedSignal(Signal):
         ----------
         Omega: float
             bandwith of the signal, i.e. frequency used for the sincs
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             locations of the sincs that form the signal
-        sinc_amps: list or np.ndarray
+        sinc_amps: array_like
             amplitudes of the sincs that form the signal
         """
 
@@ -173,7 +191,7 @@ class bandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -184,7 +202,7 @@ class bandlimitedSignal(Signal):
 
         signal = np.zeros_like(t)
         for i in range(len(self._sinc_locs)):
-            signal += self._sinc_amps[i] * Helpers.sinc(
+            signal += self._sinc_amps[i] * src.helpers.kernels.sinc(
                 t - self._sinc_locs[i], self.Omega
             )
         return signal
@@ -193,9 +211,9 @@ class bandlimitedSignal(Signal):
         """
         PARAMETERS
         ----------
-        t_start: int, list or np.ndarray
+        t_start: float or array_like
             lower bound(s) of the integral computation
-        t_end: int, list or np.ndarray
+        t_end: float or array_like
             upper bound(s) of the integral computation
 
         RETURNS
@@ -212,8 +230,8 @@ class bandlimitedSignal(Signal):
         return np.sum(
             sinc_amps
             * (
-                Helpers.sinc_integral(t_end.T - sinc_locs, self._Omega)
-                - Helpers.sinc_integral(t_start.T - sinc_locs, self._Omega)
+                src.helpers.kernels.sinc_integral(t_end.T - sinc_locs, self._Omega)
+                - src.helpers.kernels.sinc_integral(t_start.T - sinc_locs, self._Omega)
             ),
             1,
         )
@@ -227,9 +245,13 @@ class bandlimitedSignal(Signal):
     def get_omega(self):
         return self._Omega
 
+    def get_max_frequency(self):
+        return self._max_frequency
+
     Omega = property(get_omega)
     sinc_locs = property(get_sinc_locs)
     sinc_amps = property(get_sinc_amps)
+    max_frequency = property(get_omega)
 
 
 class piecewiseConstantSignal(Signal):
@@ -239,9 +261,9 @@ class piecewiseConstantSignal(Signal):
 
     ATTRIBUTES
     ----------
-    _discontinuities: list or np.ndarray
+    _discontinuities: array_like
         points at which the signal changes value
-    _values: list or np.ndarray
+    _values: array_like
         values the signal takes between pairs of successive discontinuities
     """
 
@@ -249,9 +271,9 @@ class piecewiseConstantSignal(Signal):
         """
         PARAMETERS
         ----------
-        discontinuities: list or np.ndarray
+        discontinuities: array_like
             points at which the signal changes value
-        values: list or np.ndarray
+        values: array_like
             values the signal takes between pairs of successive discontinuities
         """
         if len(discontinuities) != len(values) + 1:
@@ -265,7 +287,7 @@ class piecewiseConstantSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -314,9 +336,9 @@ class lPFedPCSSignal(Signal):
 
     ATTRIBUTES
     ----------
-    _discontinuities: list or np.ndarray
+    _discontinuities: array_like
         points at which the signal changes value
-    _values: list or np.ndarray
+    _values: array_like
         values the signal takes between pairs of successive discontinuities
     omega: float
         bandwidth of sinc used to low pass filter the signal
@@ -331,7 +353,7 @@ class lPFedPCSSignal(Signal):
         """
         PARAMETERS
         ----------
-        t: int, list or np.ndarray
+        t: float or array_like
             time(s) at which the signal should be sampled
 
         RETURNS
@@ -343,8 +365,10 @@ class lPFedPCSSignal(Signal):
         samples = np.zeros_like(t)
         for value_index in range(len(self.values)):
             samples += self.values[value_index] * (
-                Helpers.sinc_integral(t - self.discontinuities[value_index], self.omega)
-                - Helpers.sinc_integral(
+                src.helpers.kernels.sinc_integral(
+                    t - self.discontinuities[value_index], self.omega
+                )
+                - src.helpers.kernels.sinc_integral(
                     t - self.discontinuities[value_index + 1], self.omega
                 )
             )
@@ -356,7 +380,7 @@ class lPFedPCSSignal(Signal):
 
         PARAMETERS
         ----------
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             location of sincs that make up the resulting signal
 
         RETURNS

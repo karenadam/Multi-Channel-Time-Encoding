@@ -1,3 +1,5 @@
+import numpy as np
+import scipy.linalg
 from src import *
 
 
@@ -373,9 +375,9 @@ class SSignalMChannelDecoder(Decoder):
         """
 
         return (
-            Helpers.dirichlet_integral(t, self.period, self.n_components)
+            helpers.kernels.dirichlet_integral(t, self.period, self.n_components)
             if self.periodic
-            else Helpers.sinc_integral(t, self.Omega)
+            else helpers.kernels.sinc_integral(t, self.Omega)
         )
 
     def _kernel_integral(self, t):
@@ -396,9 +398,9 @@ class SSignalMChannelDecoder(Decoder):
         """
 
         return (
-            Helpers.dirichlet_second_integral(t, self.period, self.n_components)
+            helpers.kernels.dirichlet_second_integral(t, self.period, self.n_components)
             if self.periodic
-            else Helpers.sinc_second_integral(t, self.Omega)
+            else helpers.kernels.sinc_second_integral(t, self.Omega)
         )
 
 
@@ -448,7 +450,7 @@ class MSignalMChannelDecoder(Decoder):
             period of periodic signal
         n_components: int
             number of FS components of periodic signal
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             list of locations of sincs that make up an aperiodic signals
         """
 
@@ -495,7 +497,7 @@ class MSignalMChannelDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -517,7 +519,7 @@ class MSignalMChannelDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -564,9 +566,7 @@ class MSignalMChannelDecoder(Decoder):
             operator_inverse.dot(flat_bwd_mixing).dot(PCS_sampler).dot(q)
         ).reshape((self.n_signals, len(self.sinc_locs)))
 
-        return SignalCollection.bandlimitedSignals(
-            self.Omega, self.sinc_locs, x_sinc_amps
-        )
+        return src.signals.bandlimitedSignals(self.Omega, self.sinc_locs, x_sinc_amps)
 
     def _decode_periodic(self, spikes):
         """
@@ -593,7 +593,7 @@ class MSignalMChannelDecoder(Decoder):
             np.linalg.pinv(measurement_operator).dot(measurement_vector)
         ).reshape((self.n_signals, 2 * self.n_components - 1))
 
-        return SignalCollection.periodicBandlimitedSignals(
+        return src.signals.periodicBandlimitedSignals(
             self.period, self.n_components, recovered_coefficients
         )
 
@@ -616,7 +616,7 @@ class MSignalMChannelDecoder(Decoder):
            piecewise constant signal
         """
 
-        PCSSignal = SignalCollection.piecewiseConstantSignals(
+        PCSSignal = src.signals.piecewiseConstantSignals(
             spikes.get_spikes(),
             values=[
                 [0] * (spikes.get_n_spikes_of(ch) - 1) for ch in range(self.n_channels)
@@ -654,8 +654,12 @@ class MSignalMChannelDecoder(Decoder):
             integ_up_limit = spikes_of_ch[integral_index + 1]
             integ_low_limit = spikes_of_ch[integral_index]
             return np.atleast_2d(
-                Helpers.sinc_integral(integ_up_limit - self.sinc_locs, self.Omega)
-                - Helpers.sinc_integral(integ_low_limit - self.sinc_locs, self.Omega)
+                helpers.kernels.sinc_integral(
+                    integ_up_limit - self.sinc_locs, self.Omega
+                )
+                - helpers.kernels.sinc_integral(
+                    integ_low_limit - self.sinc_locs, self.Omega
+                )
             )
 
         return scipy.linalg.block_diag(
@@ -680,7 +684,7 @@ class MSignalMChannelDecoder(Decoder):
 
         PARAMETERS
         ----------
-        mixing_matrix: list or np.ndarray
+        mixing_matrix: array_like
             matrix to be flattened
 
         RETURNS
@@ -730,7 +734,7 @@ class MSignalMChannelDecoder(Decoder):
         def get_measurement_operator_bloc(ch):
             spikes_in_ch = spikes[ch]
             a_ch = np.atleast_2d(self.mixing_matrix[ch, :])
-            integrals = Helpers.exp_int(
+            integrals = helpers.kernels.exp_int(
                 FS_components, spikes_in_ch[:-1:], spikes_in_ch[1::]
             )
             return np.real(
@@ -836,7 +840,7 @@ class UnknownMixingDecoder(Decoder):
             period of periodic signal
         n_components: int
             number of FS components of periodic signal
-        sinc_locs: list or np.ndarray
+        sinc_locs: array_like
             list of locations of sincs that make up an aperiodic signals
         """
 
@@ -884,13 +888,15 @@ class UnknownMixingDecoder(Decoder):
         def component_integral(start, end):
             if self.periodic:
                 components = np.arange(-self.n_components + 1, self.n_components, 1)
-                return Helpers.dirichlet_component_integral(
+                return helpers.kernels.dirichlet_component_integral(
                     end, self.period, components
-                ) - Helpers.dirichlet_component_integral(start, self.period, components)
+                ) - helpers.kernels.dirichlet_component_integral(
+                    start, self.period, components
+                )
             else:
-                return Helpers.sinc_integral(
+                return helpers.kernels.sinc_integral(
                     end - self.sinc_locs, self.Omega
-                ) - Helpers.sinc_integral(start - self.sinc_locs, self.Omega)
+                ) - helpers.kernels.sinc_integral(start - self.sinc_locs, self.Omega)
 
         measurement_matrices = [
             np.concatenate(
@@ -928,7 +934,7 @@ class UnknownMixingDecoder(Decoder):
 
         RETURNS
         -------
-        np.ndarray or Signal.SignalCollection
+        np.ndarray or Signal.signalCollection
             vector containing input signals sampled at times t or parametric form
             of input signals
         """
@@ -940,16 +946,16 @@ class UnknownMixingDecoder(Decoder):
         G = self.get_measurement_matrix(spikes)
         q = self.get_measurement_vector(spikes)
         G_inv = np.linalg.pinv(G)
-        C_y = Helpers.singular_value_projection_w_matrix(
+        C_y = helpers.kernels.singular_value_projection_w_matrix(
             shape, G_inv.dot(G), G_inv.dot(q.T), rank, tol=1e-5, lr=0.5
         )
 
         if not self.periodic:
-            y_param = SignalCollection.bandlimitedSignals(
+            y_param = src.signals.bandlimitedSignals(
                 self.Omega, self.sinc_locs, sinc_amps=C_y
             )
         else:
-            y_param = SignalCollection.periodicBandlimitedSignals(
+            y_param = src.signals.periodicBandlimitedSignals(
                 self.period, self.n_components, C_y
             )
         return y_param if return_as_param else y_param.sample(t)

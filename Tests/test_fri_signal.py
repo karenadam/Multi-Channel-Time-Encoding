@@ -9,7 +9,7 @@ import src
 
 class TestFriSignal:
     def test_proper_creation(self):
-        fri_signal = src.FRISignal.FRISignal(
+        fri_signal = src.signals.FRISignal(
             np.array([0, 1, 1.5]), np.array([1, 1, 1]), 2.0
         )
         assert np.allclose(fri_signal._dirac_locations, np.array([0, 1, 1.5]))
@@ -18,7 +18,7 @@ class TestFriSignal:
     def test_proper_FS_coeffs_1(self):
         t_k = np.array([1])
         c_k = np.array([1])
-        fri_signal = src.FRISignal.FRISignal(t_k, c_k, 2.0)
+        fri_signal = src.signals.FRISignal(t_k, c_k, 2.0)
         m = np.array([[1, 2, 5]]).T
         assert np.allclose(
             fri_signal.get_fourier_series(m),
@@ -28,7 +28,7 @@ class TestFriSignal:
     def test_proper_FS_coeffs_2(self):
         t_k = np.array([1, 1.5])
         c_k = np.array([1, -1])
-        fri_signal = src.FRISignal.FRISignal(t_k, c_k, 2.0)
+        fri_signal = src.signals.FRISignal(t_k, c_k, 2.0)
         m = np.array([[1, 2, 3, 5]]).T
         assert np.allclose(
             fri_signal.get_fourier_series(m),
@@ -43,10 +43,10 @@ class TestFriSignal:
     def test_can_find_annihilator_1_signal(self):
         t_k = np.array([1, 1.5])
         c_k = np.array([1, -1])
-        fri_signal = src.FRISignal.FRISignal(t_k, c_k, 2.0)
+        fri_signal = src.signals.FRISignal(t_k, c_k, 2.0)
         M = 3
         f_s_coefficients = fri_signal.get_fourier_series(np.arange(-M, M + 1, 1).T)
-        a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
+        a_filter = src.signals.AnnihilatingFilter(f_s_coefficients)
         result = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients)
         assert np.allclose(
             result[M - 1 : -M + 1 : 1], np.zeros_like(result[M - 1 : -M + 1 : 1])
@@ -56,8 +56,8 @@ class TestFriSignal:
         t_k = np.array([1, 1.5])
         c_k_1 = np.array([1, -1])
         c_k_2 = np.array([0.5, 3])
-        fri_signal_1 = src.FRISignal.FRISignal(t_k, c_k_1, 2.0)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k, c_k_2, 2.0)
+        fri_signal_1 = src.signals.FRISignal(t_k, c_k_1, 2.0)
+        fri_signal_2 = src.signals.FRISignal(t_k, c_k_2, 2.0)
         M = 3
         f_s_coefficients = np.zeros((2, 2 * M + 1), dtype="complex")
         f_s_coefficients[0, :] = fri_signal_1.get_fourier_series(
@@ -66,7 +66,7 @@ class TestFriSignal:
         f_s_coefficients[1, :] = fri_signal_2.get_fourier_series(
             np.arange(-M, M + 1, 1).T
         )
-        a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
+        a_filter = src.signals.AnnihilatingFilter(f_s_coefficients)
         result_1 = np.convolve(
             a_filter.get_filter_coefficients(), f_s_coefficients[0, :]
         )
@@ -81,8 +81,8 @@ class TestFriSignal:
         t_k_2 = np.array([0, 1.2])
         c_k_1 = np.array([1, -1])
         c_k_2 = np.array([0.5, 3])
-        fri_signal_1 = src.FRISignal.FRISignal(t_k_1, c_k_1, 2.0)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k_2, c_k_2, 2.0)
+        fri_signal_1 = src.signals.FRISignal(t_k_1, c_k_1, 2.0)
+        fri_signal_2 = src.signals.FRISignal(t_k_2, c_k_2, 2.0)
         M = 3
         f_s_coefficients = np.zeros((2, 2 * M + 1), dtype="complex")
         f_s_coefficients[0, :] = fri_signal_1.get_fourier_series(
@@ -91,7 +91,7 @@ class TestFriSignal:
         f_s_coefficients[1, :] = fri_signal_2.get_fourier_series(
             np.arange(-M, M + 1, 1).T
         )
-        a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients[0, :])
+        a_filter = src.signals.AnnihilatingFilter(f_s_coefficients[0, :])
         annihilatable_f_s = a_filter.make_annihilatable(fri_signal_2)
         result_1 = np.convolve(
             a_filter.get_filter_coefficients(), f_s_coefficients[0, :]
@@ -112,8 +112,8 @@ class TestFriSignal:
         t_k_1 = np.array([1, 1.5])
         c_k_1 = np.array([1, -1])
         c_k_2 = np.array([0.5, 3])
-        fri_signal_1 = src.FRISignal.FRISignal(t_k_1, c_k_1, 2.0)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k_1, c_k_2, 2.0)
+        fri_signal_1 = src.signals.FRISignal(t_k_1, c_k_1, 2.0)
+        fri_signal_2 = src.signals.FRISignal(t_k_1, c_k_2, 2.0)
         M = 3
         f_s_coefficients = np.zeros((2, 2 * M + 1), dtype="complex")
         f_s_coefficients[0, :] = fri_signal_1.get_fourier_series(
@@ -138,8 +138,8 @@ class TestFriSignal:
     #     t_k_1 = np.array([1,1.5])
     #     c_k_1 = np.array([1,-1])
     #     c_k_2 = np.array([0.5,3])
-    #     fri_signal_1 = src.FRISignal.FRISignal(t_k_1, c_k_1, 2.0)
-    #     fri_signal_2 = src.FRISignal.FRISignal(t_k_1, c_k_2, 2.0)
+    #     fri_signal_1 = src.signals.FRISignal(t_k_1, c_k_1, 2.0)
+    #     fri_signal_2 = src.signals.FRISignal(t_k_1, c_k_2, 2.0)
     #     M = 3
     #     f_s_coefficients = np.zeros((2,2*M+1), dtype = 'complex')
     #     f_s_coefficients[0,:] = fri_signal_1.get_fourier_series(np.arange(-M, M+1,1).T)
@@ -162,7 +162,7 @@ class TestFriSignal:
     #
     #     for i in range(30):
     #         f_s_coefficients_estimate_reshaped = np.reshape(f_s_coefficients_estimate,(2,-1))
-    #         a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients_estimate_reshaped)
+    #         a_filter = src.signals.AnnihilatingFilter(f_s_coefficients_estimate_reshaped)
     #         print(a_filter.get_filter_coefficients())
     #         f_s_coefficients_post_annihilation = np.zeros((2,2*M+1), dtype = 'complex')
     #         f_s_coefficients_post_annihilation[0,:] = a_filter.make_annihilatable(f_s_coefficients_estimate_reshaped[0,:])
@@ -182,13 +182,13 @@ class TestFriSignal:
     #     t_k = np.array([1,1.5])
     #     c_k_1 = np.array([1,-1])
     #     c_k_2 = np.array([0.5,3])
-    #     fri_signal_1 = src.FRISignal.FRISignal(t_k, c_k_1, 2.0)
-    #     fri_signal_2 = src.FRISignal.FRISignal(t_k, c_k_2, 2.0)
+    #     fri_signal_1 = src.signals.FRISignal(t_k, c_k_1, 2.0)
+    #     fri_signal_2 = src.signals.FRISignal(t_k, c_k_2, 2.0)
     #     M = 3
     #     f_s_coefficients = np.zeros((2,2*M+1), dtype = 'complex')
     #     f_s_coefficients[0,:] = fri_signal_1.get_fourier_series(np.arange(-M, M+1,1).T)
     #     f_s_coefficients[1,:] = fri_signal_2.get_fourier_series(np.arange(-M, M+1,1).T)
-    #     a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
+    #     a_filter = src.signals.AnnihilatingFilter(f_s_coefficients)
     #     result_1 = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients[0,:])
     #     result_2 = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients[1,:])
     #     assert np.allclose(result_1[M:-M], np.zeros_like(result_1[M:-M]))
@@ -205,10 +205,10 @@ class TestFriSignal:
         c_k_2 = np.random.uniform(low=-2.0, high=2.0, size=(10))
         c_k_3 = np.random.uniform(low=-2.0, high=2.0, size=(10))
         c_k_4 = np.random.uniform(low=-2.0, high=2.0, size=(10))
-        fri_signal_1 = src.FRISignal.FRISignal(t_k_1, c_k_1, 2.0)
-        fri_signal_2 = src.FRISignal.FRISignal(t_k_1, c_k_2, 2.0)
-        fri_signal_3 = src.FRISignal.FRISignal(t_k_1, c_k_3, 2.0)
-        fri_signal_4 = src.FRISignal.FRISignal(t_k_1, c_k_4, 2.0)
+        fri_signal_1 = src.signals.FRISignal(t_k_1, c_k_1, 2.0)
+        fri_signal_2 = src.signals.FRISignal(t_k_1, c_k_2, 2.0)
+        fri_signal_3 = src.signals.FRISignal(t_k_1, c_k_3, 2.0)
+        fri_signal_4 = src.signals.FRISignal(t_k_1, c_k_4, 2.0)
 
         M = 9
         f_s_coefficients = np.zeros((4, 2 * M + 1), dtype="complex")
@@ -226,7 +226,7 @@ class TestFriSignal:
         )
 
         filter_length = K + 1
-        a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients, filter_length)
+        a_filter = src.signals.AnnihilatingFilter(f_s_coefficients, filter_length)
         print(a_filter.get_filter_coefficients())
 
         K_s = np.atleast_2d(np.arange(0.0, filter_length - 0.1, 1.0)).T
@@ -258,14 +258,14 @@ class TestFriSignal:
     #     measurements = []
     #     for n_s in range(num_signals):
     #         c_k.append(2*(np.random.random(size = (num_diracs)) - 0.5))
-    #         fri_signals.append(src.FRISignal.FRISignal(t_k, c_k[n_s], 2.0))
+    #         fri_signals.append(src.signals.FRISignal(t_k, c_k[n_s], 2.0))
     #         f_s_coefficients.append(fri_signals[n_s].get_fourier_series(np.arange(-M, M+1,1).T))
     #         random_sensing_matrices.append(np.random.random(size = (len(f_s_coefficients[n_s].flatten())-1, len(f_s_coefficients[n_s].flatten()))))
     #         measurements.append(random_sensing_matrices[n_s].dot(f_s_coefficients[n_s]))
     #
     #     recovered_circ_matrix = self.recover_from_meas(random_sensing_matrices, measurements,num_diracs, num_signals)
     #
-    #     # a_filter = src.FRISignal.AnnihilatingFilter(f_s_coefficients)
+    #     # a_filter = src.signals.AnnihilatingFilter(f_s_coefficients)
     #     # print(a_filter.get_filter_coefficients())
     #     # result = np.convolve(a_filter.get_filter_coefficients(), f_s_coefficients)
     #     # assert np.allclose(result[M-1:-M+1:1], np.zeros_like(result[M-1:-M+1:1]))
@@ -369,7 +369,7 @@ class TestFriSignal:
         concatenated_constraints = np.concatenate(
             (projection_constraints, circularity_constraints)
         )
-        circ_matrix_recovered = src.Helpers.singular_value_projection_w_matrix(
+        circ_matrix_recovered = src.helpers.singular_value_projection_w_matrix(
             recovered_matrix_shape,
             concatenated_constraints,
             concatenated_measurements,

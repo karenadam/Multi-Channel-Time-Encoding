@@ -1,3 +1,9 @@
+import numpy as np
+import scipy.linalg
+import scipy.stats
+import src.signals.fri_signal
+from src.helpers.complex_tensor_constraints import complex_vector_constraints
+import copy
 from src import *
 import sklearn.cluster
 
@@ -94,7 +100,7 @@ class Layer(object):
         self.tem_params.mixing_matrix = copy.deepcopy(self.weight_matrix)
 
     def get_ex_measurement_pairs(
-        self, input: Signals.SignalCollection, spike_times: SpikeTimes
+        self, input: src.signals.signalCollection, spike_times: SpikeTimes
     ):
         """
         returns the measurement matrix and vector corresponding to the weight matrix of
@@ -102,7 +108,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signals.SignalCollection
+        input: src.signals.signalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -135,7 +141,7 @@ class Layer(object):
         ]
 
         integrals = [
-            Helpers.exp_int(
+            helpers.kernels.exp_int(
                 exponents,
                 s_t[:-1],
                 s_t[1:],
@@ -144,7 +150,8 @@ class Layer(object):
         ]
 
         measurement_matrices = [
-            (np.array(input.coefficient_values).dot(integ)).T for integ in integrals
+            np.real(np.array(input.coefficient_values).dot(integ)).T
+            for integ in integrals
         ]
 
         return measurement_matrices, measurement_results
@@ -179,12 +186,12 @@ class Layer(object):
             *measurement_matrices
         )
         concatenated_results = np.concatenate(measurement_results)
-        return np.linalg.lstsq(block_diagonal_measurement_matrix, concatenated_results)[
-            0
-        ].reshape((self.num_outputs, self.num_inputs))
+        return np.linalg.lstsq(
+            block_diagonal_measurement_matrix, concatenated_results, rcond=None
+        )[0].reshape((self.num_outputs, self.num_inputs))
 
     def learn_weight_matrix_from_one_ex(
-        self, input: Signals.SignalCollection, spike_times: Spike_Times
+        self, input: src.signals.signalCollection, spike_times: spike_times
     ):
         """
         learns the weight matrix that solves (in the least-squares sense) for the
@@ -192,7 +199,7 @@ class Layer(object):
 
         Parameters
         ----------
-        input: Signals.SignalCollection
+        input: src.signals.signalCollection
             input to the layer in this example
         spike_times: SpikeTimes
             spike time output of the layer in this example
@@ -223,7 +230,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signals.SignalCollection objects, input to the layer in the different examples
+            list of src.signals.signalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -278,7 +285,7 @@ class Layer(object):
         Parameters
         ----------
         input: list
-            list of Signals.SignalCollection objects, input to the layer in the different examples
+            list of src.signals.signalCollection objects, input to the layer in the different examples
         spike_times: list
             list of SpikeTimes objects, spike time output of the layer in the different examples
 
@@ -321,7 +328,7 @@ class Layer(object):
             vector containing the timing of the diracs in the signals with fourier
             series coefficients fsc
         """
-        a_filter = src.FRISignal.AnnihilatingFilter(fsc, filter_length)
+        a_filter = src.signals.fri_signal.AnnihilatingFilter(fsc, filter_length)
         filter_poly = np.polynomial.polynomial.Polynomial(
             a_filter.get_filter_coefficients()
         )
@@ -352,7 +359,7 @@ class Layer(object):
         """
 
         def get_fsc_of_unit_dirac(time: float, n_fsc, period):
-            return src.FRISignal.FRISignal(
+            return src.signals.fri_signal.FRISignal(
                 np.array([time]), np.array([1]), period
             ).get_fourier_series(np.arange(-n_fsc + 1, n_fsc, 1).T)
 
@@ -364,7 +371,7 @@ class Layer(object):
         )
 
     def learn_spike_input_and_weight_matrix_from_one_example(
-        self, spike_times: Spike_Times, n_fsc: int, period: float
+        self, spike_times: spike_times, n_fsc: int, period: float
     ):
         """
         simultaneously learns (and sets) the weight matrix of a layer and returns
@@ -390,13 +397,22 @@ class Layer(object):
             spike_times, n_fsc, period
         )
 
-        self.set_weight_matrix(
-            sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T
-        )
+        (
+            centroids,
+            labels,
+            coefficients,
+            recovered_times,
+            num_diracs,
+        ) = self._cluster_according_to_dirac_coeffs(coefficients, [recovered_times])
+
+        self.set_weight_matrix(centroids)
+        # self.set_weight_matrix(
+        #     sklearn.cluster.k_means(coefficients, self.num_inputs)[0].T
+        # )
         return recovered_times
 
     def get_diracs_from_spikes(
-        self, spike_times: Spike_Times, n_fsc: int, period: float
+        self, spike_times: spike_times, n_fsc: int, period: float
     ):
         """
         retrieves the input spikes (timing and amplitude) that generate the output
@@ -414,10 +430,9 @@ class Layer(object):
         Returns
         -------
         np.ndarray
-            2D matrix where each row contains the spike times of the corresponding
-            node of the layer
+            1D list with spike time inputs that generated the spike time outputs
         np.ndarray
-            2D matrix where each row contains the spike amplitudes of the corresponding
+            2D matrix where each row contains the input spike amplitudes of the corresponding
             node of the layer
         """
 
@@ -471,23 +486,90 @@ class Layer(object):
         ]
         dirac_times = [d_p[0] for d_p in dirac_params]
         dirac_coeffs = np.concatenate([d_p[1] for d_p in dirac_params], axis=0)
-        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+
+        (
+            centroids,
+            labels,
+            dirac_coeffs,
+            dirac_times,
+            num_diracs,
+        ) = self._cluster_according_to_dirac_coeffs(dirac_coeffs, dirac_times)
+
         self.set_weight_matrix(copy.deepcopy(centroids.T))
 
         def get_prvs_layer_spikes(example_index, input_neuron_index):
-            example_labels = labels[example_index * n_fsc : (example_index + 1) * n_fsc]
-            return dirac_times[example_index][
-                np.where(example_labels == input_neuron_index)
+            example_labels = labels[
+                example_index * num_diracs : (example_index + 1) * num_diracs
             ]
+            dirac_times_to_return = []
+            for i_d in range(len(dirac_times[example_index])):
+                if example_labels[i_d] == input_neuron_index:
+                    dirac_times_to_return.append(dirac_times[example_index][i_d])
+            return dirac_times_to_return
 
         return [
             [get_prvs_layer_spikes(n_e, n_i) for n_i in range(self.num_inputs)]
             for n_e in range(n_examples)
         ]
 
+    def _cluster_according_to_dirac_coeffs(self, dirac_coeffs, dirac_times):
+        """
+
+        PARAMETERS
+        ----------
+        dirac_coeffs: np.array
+            2D matrix where each row contains the coefficients of a specific dirac
+            across different inputs
+        dirac_times: list
+            list of lists with spike time inputs that generated the spike time outputs
+            for different examples
+
+        RETURNS
+        -------
+        np.array
+            centroids of dirac coefficients following kmeans algorithm (adjusted to remove
+            diracs with coefficients close to zero)
+        np.array
+            list with assignment of dirac to corresponding centroid
+        np.array
+            2D matrix where each row contains the spike amplitudes of the corresponding
+            node of the layer
+        list
+            list of lists with spike time inputs that generated the spike time outputs
+            for different examples
+        int
+            number of diracs per example
+        """
+        # TODO: here and elsewhere, we assume that all examples have the same number of diracs
+        #       need to change this to be more flexible
+
+        # get centroids assuming all dirac locations are correct
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+
+        # add centroid with zero amplitude and recluster
+        augmented_centroids = np.concatenate(
+            [np.zeros((1, centroids.shape[1])), centroids]
+        )
+        kmeans_object = sklearn.cluster.KMeans(n_clusters=augmented_centroids.shape[0])
+        kmeans_object.fit(augmented_centroids)
+        labels_ = kmeans_object.predict(dirac_coeffs)
+
+        # get rid of diracs with amplitudes close to zero
+        label_to_scrap = kmeans_object.predict(augmented_centroids)[0]
+        indices_to_keep = np.where(labels_ != label_to_scrap)[0]
+        dirac_coeffs = dirac_coeffs[indices_to_keep]
+        flattened_dirac_times = np.concatenate(dirac_times)[indices_to_keep]
+        dirac_times = np.reshape(flattened_dirac_times, (len(dirac_times), -1))
+        num_diracs = dirac_times.shape[1]
+        dirac_times = dirac_times.tolist()
+
+        # cluster again, having dropped diracs with amplitudes close to zero
+        centroids, labels = sklearn.cluster.k_means(dirac_coeffs, self.num_inputs)[0:2]
+        return centroids, labels, dirac_coeffs, dirac_times, num_diracs
+
     def _get_preactivation_fsc_measurement_constraints(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_o: int,
         n_fsc: int,
         period: float,
@@ -524,7 +606,7 @@ class Layer(object):
         """
 
         exponents = 1j * 2 * np.pi / period * np.arange(-n_fsc + 1, n_fsc, 1)
-        integrals = Helpers.exp_int(
+        integrals = helpers.kernels.exp_int(
             exponents, spike_times[n_o][:-1], spike_times[n_o][1:]
         )
 
@@ -574,7 +656,7 @@ class Layer(object):
 
     def _get_preactivation_fsc_single_neuron(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_o: int,
         n_fsc: int,
         period: float,
@@ -626,7 +708,7 @@ class Layer(object):
 
     def get_preactivation_fsc(
         self,
-        spike_times: Spike_Times,
+        spike_times: spike_times,
         n_fsc: int,
         period: float,
         real_f_s: bool = False,
@@ -653,7 +735,10 @@ class Layer(object):
             matrix with fourier series coefficients of input to each node of the network for
             this example
         """
-        assert spike_times.n_channels == self.num_outputs
+        if spike_times.n_channels != self.num_outputs:
+            raise ValueError(
+                "Number of output channels does not match number of outputs in layer"
+            )
 
         f_s_coefficients = np.concatenate(
             [

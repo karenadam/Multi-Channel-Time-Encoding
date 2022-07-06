@@ -24,17 +24,46 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(
+        original = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = Encoder.DiscreteEncoder(tem_params).encode(
+        spikes_single = encoder.DiscreteEncoder(tem_params).encode(
             original, signal_end_time=15, delta_t=delta_t
         )
-        rec_single = Decoder.SSignalMChannelDecoder(
+        rec_single = decoder.SSignalMChannelDecoder(
+            tem_params, periodic=False, Omega=omega
+        ).decode(spikes_single, t)
+        start_index = int(len(y) / 10)
+        end_index = int(len(y) * 9 / 10)
+
+        assert (
+            np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
+            < 1e-3
+        )
+
+    def test_can_reconstruct_moduloed_encoding(self):
+        kappa = 1
+        delta = 1
+
+        omega = np.pi
+        delta_t = 1e-4
+        t = np.arange(0, 15, delta_t)
+        np.random.seed(10)
+        original = src.signals.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        y = original.sample(t)
+        b = np.max(np.abs(y)) + 1
+
+        tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
+        spikes_single = encoder.DiscreteEncoder(tem_params).encode(
+            original, signal_end_time=15, delta_t=delta_t
+        )
+        rec_single = decoder.SSignalMChannelDecoder(
             tem_params, periodic=False, Omega=omega
         ).decode(spikes_single, t)
         start_index = int(len(y) / 10)
@@ -53,7 +82,7 @@ class TestTimeEncoderSingleSignalSingleChannel:
         delta_t = 1e-4
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
-        original = Signal.bandlimitedSignal(
+        original = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         y = original.sample(t)
@@ -61,12 +90,10 @@ class TestTimeEncoderSingleSignalSingleChannel:
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
 
-        encoder = Encoder.DiscreteEncoder(tem_params)
-        spikes_single = encoder.encode(original, signal_end_time=15, delta_t=delta_t)
-        decoder = Decoder.SSignalMChannelDecoder(
-            tem_params, periodic=False, Omega=omega
-        )
-        rec_single = decoder.decode(
+        enc = encoder.DiscreteEncoder(tem_params)
+        spikes_single = enc.encode(original, signal_end_time=15, delta_t=delta_t)
+        dec = decoder.SSignalMChannelDecoder(tem_params, periodic=False, Omega=omega)
+        rec_single = dec.decode(
             spikes_single,
             t,
         )
@@ -87,18 +114,18 @@ class TestTimeEncoderSingleSignalSingleChannel:
         t = np.arange(0, 15, delta_t)
         np.random.seed(10)
         x_param = []
-        original = Signal.bandlimitedSignal(
+        original = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 15, np.pi / omega)
         )
         x_param.append(original)
         y = original.sample(t)
         b = np.max(np.abs(y)) + 1
-        signal = SignalCollection.bandlimitedSignals(omega)
+        signal = src.signals.bandlimitedSignals(omega)
         signal.add(original)
 
         tem_params = TEMParams(kappa, delta, b, mixing_matrix=[[1]])
-        spikes_single = Encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
-        rec_single = Decoder.SSignalMChannelDecoder(
+        spikes_single = encoder.ContinuousEncoder(tem_params).encode(signal, t[-1])
+        rec_single = decoder.SSignalMChannelDecoder(
             tem_params, periodic=False, Omega=omega
         ).decode(
             spikes_single,
@@ -110,3 +137,8 @@ class TestTimeEncoderSingleSignalSingleChannel:
             np.mean(((rec_single - y) ** 2)[start_index:end_index]) / np.mean(y**2)
             < 1e-3
         )
+
+
+if __name__ == "__main__":
+    TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_standard_encoding()
+    TestTimeEncoderSingleSignalSingleChannel().test_can_reconstruct_moduloed_encoding()

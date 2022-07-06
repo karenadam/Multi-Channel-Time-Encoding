@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 
-sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/../src")
+sys.path.insert(0, os.path.split(os.path.realpath(__file__))[0] + "/..")
 from src import *
 
 
@@ -17,14 +17,14 @@ class TestTimeEncoderMultiSignalMultiChannel:
         delta_t = 1e-4
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original1 = Signal.bandlimitedSignal(
+        original1 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         np.random.seed(11)
-        original2 = Signal.bandlimitedSignal(
+        original2 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
-        signals = SignalCollection.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        signals = src.signals.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         signals.add(original1)
         signals.add(original2)
         y = signals.sample(t)
@@ -32,9 +32,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         A = [[0.9, 0.1], [0.2, 0.8]]
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(signals, t[-1])
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(signals, t[-1])
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -44,15 +44,11 @@ class TestTimeEncoderMultiSignalMultiChannel:
         start_index = int(y.shape[1] / 10)
         end_index = int(y.shape[1] * 9 / 10)
 
-        assert (
-            np.mean(((rec_mult[0, :] - y[0, :]) ** 2)[start_index:end_index])
-            / np.mean(y[0, :] ** 2)
-            < 1e-3
-        )
-        assert (
-            np.mean(((rec_mult[1, :] - y[1, :]) ** 2)[start_index:end_index])
-            / np.mean(y[0, :] ** 2)
-            < 1e-3
+        print(rec_mult[:, start_index:end_index])
+        print(y[:, start_index:end_index])
+
+        assert np.allclose(
+            rec_mult[:, start_index:end_index], y[:, start_index:end_index], atol=1e-2
         )
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot(self):
@@ -66,11 +62,11 @@ class TestTimeEncoderMultiSignalMultiChannel:
         end_time = 25
         t = np.arange(0, 25, delta_t)
         np.random.seed(10)
-        original1 = Signal.bandlimitedSignal(
+        original1 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         np.random.seed(11)
-        original2 = Signal.bandlimitedSignal(
+        original2 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         y = np.zeros((2, len(t)))
@@ -78,14 +74,14 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
         A = [[0.9, 0.1], [0.2, 0.8], [1, 1]]
-        y_param = SignalCollection.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        y_param = src.signals.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         y_param.add(original1)
         y_param.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -105,6 +101,60 @@ class TestTimeEncoderMultiSignalMultiChannel:
             / np.mean(y[0, :] ** 2)
             < 1e-3
         )
+
+    def test_can_do_modulo_and_discrete_encoding_with_10_by_2_mixing_one_shot(self):
+        kappa = 1
+        delta = 2
+        b = 2.5
+
+        omega = np.pi
+        delta_t = 1e-4
+        end_time = 25
+        t = np.arange(0, 25, delta_t)
+        np.random.seed(10)
+        original1 = src.signals.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        np.random.seed(11)
+        original2 = src.signals.bandlimitedSignal(
+            omega, sinc_locs=np.arange(0, 25, np.pi / omega)
+        )
+        y = np.zeros((2, len(t)))
+        y[0, :] = original1.sample(t)
+        y[1, :] = original2.sample(t)
+        y = np.atleast_2d(y)
+        A = np.random.random((20, 2))
+        y_param = src.signals.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        y_param.add(original1)
+        y_param.add(original2)
+
+        tem_params = TEMParams(kappa, delta, b, A)
+        spikes_mult = encoder.DiscreteEncoder(tem_params).encode(
+            y_param, end_time, 1e-4
+        )
+        spikes_mult_moduloed = encoder.DiscreteEncoder(tem_params).encode(
+            y_param, end_time, 1e-4
+        )
+
+        # rec_mult = decoder.MSignalMChannelDecoder(
+        #     tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
+        # ).decode(
+        #     spikes_mult,
+        #     t,
+        # )
+        #
+        # rec_mult_moduloed = decoder.MSignalMChannelDecoder(
+        #     tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
+        # ).decode(
+        #     spikes_mult_moduloed,
+        #     t,
+        # )
+        #
+        # start_index = int(y.shape[1] / 10)
+        # end_index = int(y.shape[1] * 9 / 10)
+
+        # assert np.allclose(rec_mult[:,start_index:end_index], y[:,start_index:end_index], atol = 1e-3)
+        # assert np.allclose(rec_mult_moduloed[:,start_index:end_index], y[:,start_index:end_index], atol = 1e-3)
 
     def test_can_reconstruct_precise_encoding_with_3_by_2_mixing_one_shot_no_fixed_sinc_locs(
         self,
@@ -120,11 +170,11 @@ class TestTimeEncoderMultiSignalMultiChannel:
         t = np.arange(0, 25, delta_t)
         y_param = []
         np.random.seed(10)
-        original1 = Signal.bandlimitedSignal(
+        original1 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         np.random.seed(11)
-        original2 = Signal.bandlimitedSignal(
+        original2 = src.signals.bandlimitedSignal(
             omega, sinc_locs=np.arange(0, 25, np.pi / omega)
         )
         y = np.zeros((2, len(t)))
@@ -132,7 +182,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         y[1, :] = original2.sample(t)
         y = np.atleast_2d(y)
         A = [[0.9, 0.1], [0.2, 0.8], [1, 1]]
-        y_param = SignalCollection.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
+        y_param = src.signals.bandlimitedSignals(omega, sinc_locs=[], sinc_amps=[])
         y_param.add(original1)
         y_param.add(original2)
 
@@ -141,9 +191,9 @@ class TestTimeEncoderMultiSignalMultiChannel:
         # signal_set.add(original2)
 
         tem_params = TEMParams(kappa, delta, b, A, integrator_init=int_shift)
-        spikes_mult = Encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
+        spikes_mult = encoder.ContinuousEncoder(tem_params).encode(y_param, end_time)
 
-        rec_mult = Decoder.MSignalMChannelDecoder(
+        rec_mult = decoder.MSignalMChannelDecoder(
             tem_params, periodic=False, sinc_locs=original1.get_sinc_locs(), Omega=omega
         ).decode(
             spikes_mult,
@@ -169,3 +219,7 @@ class TestTimeEncoderMultiSignalMultiChannel:
         assert TEM.kappa == [1, 1], "kappa was falsely assigned"
         assert TEM.delta == [1, 1], "delta was falsely assigned"
         assert TEM.b == [1, 1], "b was falsely assigned"
+
+
+if __name__ == "__main__":
+    TestTimeEncoderMultiSignalMultiChannel().test_can_do_modulo_and_discrete_encoding_with_10_by_2_mixing_one_shot()

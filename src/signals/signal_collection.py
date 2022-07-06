@@ -1,7 +1,10 @@
-from src import *
+import copy
+import scipy.linalg
+import src.signals.signal
+from src.signals import *
 
 
-class SignalCollection(object):
+class signalCollection(object):
     """
     Collection of multiple signals of the same type
 
@@ -33,7 +36,7 @@ class SignalCollection(object):
 
         PARAMETERS
         ----------
-        t: list or np.ndarray
+        t: array_like
             time(s) at which the signals should be sampled
 
         Returns
@@ -53,10 +56,17 @@ class SignalCollection(object):
     def get_n_signals(self):
         return self._n_signals
 
+    def get_max_frequency(self):
+        if self._n_signals > 0:
+            return self._signals[0].max_frequency
+        else:
+            return 0
+
     n_signals = property(get_n_signals)
+    max_frequency = property(get_max_frequency)
 
 
-class periodicBandlimitedSignals(SignalCollection):
+class periodicBandlimitedSignals(signalCollection):
     """
     Collection of periodic bandlimited signals formed of sums of complex
     exponentials
@@ -97,7 +107,7 @@ class periodicBandlimitedSignals(SignalCollection):
             len(coefficient_values) if coefficient_values is not None else 0
         )
         self._signals = [
-            Signal.periodicBandlimitedSignal(
+            src.signals.signal.periodicBandlimitedSignal(
                 period, n_components, coefficient_values[n]
             )
             for n in range(self._n_signals)
@@ -151,7 +161,7 @@ class periodicBandlimitedSignals(SignalCollection):
     coefficient_values = property(get_coefficients)
 
 
-class bandlimitedSignals(SignalCollection):
+class bandlimitedSignals(signalCollection):
     """
     Collection of bandlimited signals formed of sums of sincs
 
@@ -182,7 +192,7 @@ class bandlimitedSignals(SignalCollection):
         """
         self._n_signals = len(sinc_amps) if sinc_amps is not None else 0
         self._signals = [
-            Signal.bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
+            src.signals.bandlimitedSignal(Omega, sinc_locs, sinc_amps[n])
             for n in range(self._n_signals)
         ]
         self._sinc_locs = np.array(sinc_locs) if sinc_locs is not None else []
@@ -254,7 +264,7 @@ class bandlimitedSignals(SignalCollection):
     omega = property(get_omega)
 
 
-class piecewiseConstantSignals(SignalCollection):
+class piecewiseConstantSignals(signalCollection):
     """
     Collection of piecewise constant signals
 
@@ -275,7 +285,7 @@ class piecewiseConstantSignals(SignalCollection):
         self._values = values
         self._n_signals = len(discontinuities)
         self._signals = [
-            Signal.piecewiseConstantSignal(discontinuities[n], values[n])
+            src.signals.piecewiseConstantSignal(discontinuities[n], values[n])
             for n in range(self._n_signals)
         ]
 
@@ -297,7 +307,7 @@ class piecewiseConstantSignals(SignalCollection):
 
         PARAMETERS
         ----------
-        sample_locs: list or np.ndarray
+        sample_locs: array_like
             location(s) at which samples should be taken
         omega: float
             bandwidth of the low pass filter to be used
@@ -319,7 +329,7 @@ class piecewiseConstantSignals(SignalCollection):
 
         PARAMETERS
         ----------
-        sample_locs: list or np.ndarray
+        sample_locs: array_like
             location(s) at which samples should be taken
         omega: float
             bandwidth of the low pass filter to be used
@@ -335,8 +345,8 @@ class piecewiseConstantSignals(SignalCollection):
             low_limit = np.array(self.discontinuities[signal_index][:-1])
             up_limit = np.array(self.discontinuities[signal_index][1:])
             return np.atleast_2d(
-                Helpers.sinc_integral(sample_loc - low_limit, omega)
-                - Helpers.sinc_integral(sample_loc - up_limit, omega)
+                helpers.kernels.sinc_integral(sample_loc - low_limit, omega)
+                - helpers.kernels.sinc_integral(sample_loc - up_limit, omega)
             )
 
         PCS_sampler_matrix = scipy.linalg.block_diag(
